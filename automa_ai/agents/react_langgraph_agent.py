@@ -15,7 +15,8 @@ from automa_ai.common.response_parser import extract_and_parse_json
 from automa_ai.common.types import ServerConfig
 
 memory = MemorySaver()
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s | %(levelname)-8s | "
+                           "%(module)s:%(funcName)s:%(lineno)d - %(message)s")
 logger = logging.getLogger(__name__)
 
 class GenericLangGraphReactAgent(BaseAgent):

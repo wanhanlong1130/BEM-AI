@@ -3,6 +3,7 @@ import math
 import os
 import shutil
 import subprocess
+import sys
 from datetime import datetime
 
 import openstudio
@@ -11,13 +12,10 @@ from mcp.server.fastmcp.utilities.logging import get_logger
 from openstudio import BoundingBox, Point3d, Transformation
 from openstudio.openstudiomodelgeometry import DaylightingControl
 
-logging.basicConfig(
-    filename="mcp_server.log",
-    filemode="w",  # Overwrite each run
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
 logger = get_logger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+MCP_NAME = "openstudio_mcp"
 
 OPENSTUDIOCLI = "/Applications/OpenStudio-3.10.0/bin/openstudio"
 
@@ -32,7 +30,14 @@ def serve(host, port, transport):
         ValueError
     """
     logger.info("Starting OpenStudio Modifier Server")
-    mcp = FastMCP("agent-cards", host=host, port=port)
+    mcp = FastMCP(MCP_NAME, host=host, port=port)
+
+    log_file = os.path.join("./logs", f"{MCP_NAME}_server_{port}.log")
+    os.makedirs("./logs", exist_ok=True)
+
+    # Redirect stdout and stderr to log file — like `> logfile 2>&1`
+    sys.stdout = open(log_file, "a", buffering=1)
+    sys.stderr = sys.stdout
 
     @mcp.tool(
         name="modify_window_to_wall_ratio",
