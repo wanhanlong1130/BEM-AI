@@ -17,8 +17,8 @@ async def send_message_async(user_message: str):
         yield chunk
 
 def main():
-    st.set_page_config(page_title="A2A Chat", page_icon="💬", layout="centered")
-    st.title("💬 A2A Chat Interface")
+    st.set_page_config(page_title="Automa AI Chat", page_icon="💬", layout="centered")
+    st.title("💬 Automa AI Chat Interface")
 
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
