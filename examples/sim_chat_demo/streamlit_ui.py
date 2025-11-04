@@ -1,13 +1,17 @@
 import asyncio
 import streamlit as st
-from automa_ai.client.simple_client import SimpleClient  # assuming your file is named simple_client.py
+from automa_ai.client.simple_client import (
+    SimpleClient,
+)  # assuming your file is named simple_client.py
 
 A2A_SERVER_URL = "http://localhost:9999"
+
 
 # Cache the client instance
 @st.cache_resource
 def get_client():
     return SimpleClient(agent_url=A2A_SERVER_URL)
+
 
 async def send_message_async(user_message: str):
     client = get_client()
@@ -15,6 +19,7 @@ async def send_message_async(user_message: str):
     async for chunk in client.send_streaming_message(user_message):
         response_chunks.append(chunk)
         yield chunk
+
 
 def main():
     st.set_page_config(page_title="Automa AI Chat", page_icon="💬", layout="centered")
@@ -50,7 +55,9 @@ def main():
                             message = status.get("message", {})
                             parts = message.get("parts", [])
                             text_fragments = [
-                                p.get("text") for p in parts if p.get("kind") == "text" and p.get("text")
+                                p.get("text")
+                                for p in parts
+                                if p.get("kind") == "text" and p.get("text")
                             ]
                             if text_fragments:
                                 text_part = "\n".join(text_fragments)
@@ -75,6 +82,7 @@ def main():
         st.session_state["messages"].append(
             {"role": "assistant", "content": full_response}
         )
+
 
 if __name__ == "__main__":
     main()
