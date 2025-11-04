@@ -4,9 +4,9 @@ from multiprocessing import Process
 import pytest
 from google.adk.models.lite_llm import LiteLlm
 
-from agents.adk_agent import GenericADKAgent
-from common import prompts
-from mcp_servers.server import serve
+from automa_ai.agents.adk_agent import GenericADKAgent
+from automa_ai.common import prompts
+from automa_ai.mcp_servers.server import serve
 
 MCP_HOST = "localhost"
 MCP_PORT = 10100
