@@ -102,6 +102,9 @@ Project configuration is managed through `pyproject.toml`. Key configuration are
 - **Project Metadata**: Version, description, and author information
 
 ## Examples
+#### Single Agent Chatbot with Streamlit UI interface
+See [README](./examples/sim_chat_demo/README.md)
+
 #### Simple BEM typical building Network
 
 <img src="sources/bem-agentic.png" alt="BEM-Agents" width="400">
