@@ -7,7 +7,7 @@ from a2a.types import (
     TaskState,
     TaskArtifactUpdateEvent, DataPart, TextPart,
 )
-from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 
 from automa_ai.agents import GenericLLM
@@ -159,7 +159,7 @@ class OrchestratorAgent(BaseAgent):
                     # Check if the node is complete and continue to the next node
                     if isinstance(chunk.root.result, TaskStatusUpdateEvent):
                         task_status_event = chunk.root.result
-                        context_id = task_status_event.contextId
+                        context_id = task_status_event.context_id
                         logger.info(
                             f"Streaming message from task updates: {task_status_event}"
                         )

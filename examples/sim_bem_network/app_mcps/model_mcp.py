@@ -1,5 +1,7 @@
 import logging
+import os
 import shutil
+import sys
 from enum import Enum
 from pathlib import Path
 from typing import Union
@@ -7,13 +9,10 @@ from typing import Union
 from mcp.server import FastMCP
 from mcp.server.fastmcp.utilities.logging import get_logger
 
-logging.basicConfig(
-    filename="mcp_server.log",
-    filemode="w",  # Overwrite each run
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
 logger = get_logger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+MCP_NAME = "model_mcp"
 
 # counties_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'resources', 'counties.dat')
 
@@ -39,8 +38,15 @@ def serve(host, port, transport):
     Raises:
         ValueError
     """
-    logger.info("Starting OpenStudio Modifier Server")
-    mcp = FastMCP("agent-cards", host=host, port=port)
+    logger.info("Starting Energy Model Server")
+    mcp = FastMCP(MCP_NAME, host=host, port=port)
+
+    log_file = os.path.join("./logs", f"{MCP_NAME}_server_{port}.log")
+    os.makedirs("./logs", exist_ok=True)
+
+    # Redirect stdout and stderr to log file — like `> logfile 2>&1`
+    sys.stdout = open(log_file, "a", buffering=1)
+    sys.stderr = sys.stdout
 
     @mcp.tool(
         name="get_climate_by_location",

@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from multiprocessing import Process
 from typing import Dict, List
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 
 @dataclass
@@ -72,7 +72,7 @@ class MCPServerManager:
             self.servers[name] = process
 
             # Wait for the server to be ready
-            from common.utils import wait_for_port
+            from automa_ai.common.utils import wait_for_port
             wait_for_port(config.host, config.port)
             logger.info(
                 f"Server {name} started successfully on {config.host}:{config.port}"
