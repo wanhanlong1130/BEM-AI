@@ -1,0 +1,38 @@
+# This workflow will release the branch to PYPI
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: PYPI Release
+on:
+  release:
+    types: [published]
+
+# if merged, means the tests are passed from the CI process. In this action,
+# it is only focus on publishing the package to PYPI
+jobs:
+  pypi_release:
+    name: Builds Using uv and Publishes to PyPI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{github.event.release.tag_name}}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Build distribution
+        run: uv build
+
+      - name: Publish to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_KEY }}
+        run: uv publish --token $UV_PUBLISH_TOKEN
