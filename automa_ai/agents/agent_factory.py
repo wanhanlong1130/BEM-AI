@@ -25,10 +25,10 @@ def resolve_chat_model(backend: GenericLLM, model_name: str, base_url: str | Non
         return ChatOllama(model=model_name, base_url=base_url, temperature=0)
     elif backend == GenericLLM.OPENAI:
     # Need support for API key
-        return ChatOpenAI(model=model_name, base_url=base_url, api_key=api_key, streaming=True)
+        return ChatOpenAI(model=model_name, base_url=base_url, api_key=api_key, temperature=0, streaming=True)
     elif backend == GenericLLM.CLAUDE:
         assert api_key, "You must provide an API key to access Anthropic Claude model"
-        return ChatAnthropic(model_name=model_name, base_url=base_url, api_key=api_key, timeout=None, stop=["}"])
+        return ChatAnthropic(model_name=model_name, base_url=base_url, temperature=0, api_key=api_key, timeout=None, stop=["}"])
     elif backend == GenericLLM.LITELLAMA:
         return LiteLlm(model=model_name)
     else:

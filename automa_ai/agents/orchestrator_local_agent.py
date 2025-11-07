@@ -9,6 +9,7 @@ from a2a.types import (
 )
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
+from pydantic import BaseModel
 
 from automa_ai.agents import GenericLLM
 from automa_ai.agents.agent_factory import resolve_chat_model
@@ -23,6 +24,12 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+class OrchestratorLocalConfig(BaseModel):
+    chat_model: GenericLLM
+    model_name: str
+    instruction: str
+    model_base_url: str
 
 
 class OrchestratorLocalAgent(BaseAgent):

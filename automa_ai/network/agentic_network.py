@@ -8,10 +8,9 @@ from automa_ai.agents import GenericAgentType
 from automa_ai.agents.agent_factory import AgentFactory
 from automa_ai.agents.orchestrator_network_agent import OrchestratorConfig
 from automa_ai.common.agent_registry import A2AServerManager, A2AAgentServer
-from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.file_util import verify_directory_and_json_files
 from automa_ai.common.mcp_registry import MCPServerManager, MCPServerConfig
-from automa_ai.mcp_servers.server import serve
+from automa_ai.mcp_servers.agent_card_server import serve
 
 logger = logging.getLogger(__name__)
 
