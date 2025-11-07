@@ -17,7 +17,7 @@ from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.workflow import WorkflowGraph, WorkflowNode, Status
 
 logging.basicConfig(
-    filename="orchestrator_agent.json.log",
+    filename="orchestrator_agent.log",
     filemode="w",  # Overwrite each run
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -25,7 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class OrchestratorAgent(BaseAgent):
+class OrchestratorLocalAgent(BaseAgent):
     """
     Orchestrator Agent - The agent manages one task workflow.
     In the end, the agent will review the final task and decide whether it needs to reboot planner
@@ -265,7 +265,7 @@ class OrchestratorAgent(BaseAgent):
             # The graph is complete and no updates, so okay to break from the loop.
             if not should_resume_workflow:
                 logger.info(
-                    "Workflow iteration complete and no restart requested. Existing main loop."
+                    "Workflow iteration complete and no restart requested. Exiting main loop."
                 )
                 break
             else:

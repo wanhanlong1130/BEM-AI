@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from automa_ai.agents import GenericAgentType, GenericLLM
 from automa_ai.agents.adk_agent import GenericADKAgent
+from automa_ai.agents.orchestrator_network_agent import OrchestratorNetworkAgent
 from automa_ai.agents.react_langgraph_agent import GenericLangGraphReactAgent
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.mcp_registry import MCPServerConfig
@@ -86,6 +87,12 @@ class AgentFactory:
                 response_format=self.response_format,
                 chat_model=chat_model,
                 mcp_servers=mcp_servers
+            )
+
+        elif self.agent_type == GenericAgentType.ORCHESTRATOR:
+            return OrchestratorNetworkAgent(
+                instructions=self.instructions,
+                chat_model=chat_model,
             )
 
         raise ValueError(f"Unknown agent type: {self.agent_type}")

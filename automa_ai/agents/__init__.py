@@ -4,6 +4,7 @@ from enum import Enum
 class GenericAgentType(Enum):
     ADK = "adk"
     LANGGRAPH = "langgraph"
+    ORCHESTRATOR = "orchestrator"
 
 
 class GenericLLM(Enum):

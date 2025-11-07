@@ -128,7 +128,7 @@ class SimpleClient:
             return response.model_dump(mode='json', exclude_none=True)
 
 
-    async def send_streaming_message(self, message: str) -> AsyncIterable[dict[str, Any]]:
+    async def send_streaming_message(self, message: str, context_id: str | None = None) -> AsyncIterable[dict[str, Any]]:
         if self.timeout is None:
             timeout = httpx.Timeout(None)
         else:
@@ -148,7 +148,8 @@ class SimpleClient:
                     'parts': [
                         {'kind': 'text', 'text': message}
                     ],
-                    'messageId': uuid4().hex,
+                    'message_id': uuid4().hex,
+                    "context_id": uuid4().hex if context_id is None else context_id,
                 },
             }
 

@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -21,6 +22,8 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = get_logger(__name__)
+
+MCP_NAME = "agent_card_mcp"
 
 
 def generate_embeddings(text):
@@ -131,6 +134,13 @@ def serve(host, port, transport, agent_cards_dir: str):
     """
     logger.info("Starting Agent Cards MCP Server")
     mcp = FastMCP("agent-cards", host=host, port=port)
+
+    log_file = os.path.join("./logs", f"{MCP_NAME}_server_{port}.log")
+    os.makedirs("./logs", exist_ok=True)
+
+    # Redirect stdout and stderr to log file — like `> logfile 2>&1`
+    sys.stdout = open(log_file, "a", buffering=1)
+    sys.stderr = sys.stdout
 
     df = build_agent_card_embeddings(agent_cards_dir)
 

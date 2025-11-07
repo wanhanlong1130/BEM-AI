@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from automa_ai.agents import GenericAgentType, GenericLLM
 from automa_ai.agents.agent_factory import AgentFactory
-from automa_ai.agents.orchestrator_agent import OrchestratorAgent
+from automa_ai.agents.orchestrator_local_agent import OrchestratorLocalAgent
 from automa_ai.common.agent_registry import A2AAgentServer
 from automa_ai.common.mcp_registry import MCPServerConfig
 from automa_ai.common.types import PlannerTask
