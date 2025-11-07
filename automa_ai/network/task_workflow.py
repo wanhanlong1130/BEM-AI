@@ -23,11 +23,18 @@ class TaskServiceOrchestrator(ServiceOrchestrator):
                 ):
                     message_event = chunk.root.result
                     logger.info(message_event)
+                    print("Received message from orchestrator: ", message_event)
                     # ✅ STEP 2: Handle input required
                     if isinstance(message_event, TaskStatusUpdateEvent):
                         if message_event.status.state == TaskState.completed:
                             print("✅ Task completed.")
                             break
+                        if message_event.status.state == TaskState.input_required:
+                            question = chunk.get("content")
+                            answer_text = input(
+                                f"❓ Agent responded: {question}\n💬 Your response: "
+                            )
+
                     elif isinstance(message_event, TaskArtifactUpdateEvent):
                         results.append(message_event.artifact)
                         print("📦 Received artifact:", message_event.artifact)

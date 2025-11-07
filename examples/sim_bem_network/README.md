@@ -19,13 +19,31 @@ BEM-AI consists of three parts:
 The client communicates with the server in real time, displaying streamed model responses as they arrive.
 
 
+<img src="../../sources/bem-agentic.png" alt="BEM-Agents" width="500">
+
+To run this example, the user will need to provide your own language models when creating agents
+```python
+planner = AgentFactory(
+    card=agent_card,
+    instructions=PLANNER_COT,
+    model_name="llama3.3:70b", # need to replace this model to a user accessible language model
+    agent_type=GenericAgentType.LANGGRAPH,
+    chat_model=GenericLLM.OLLAMA,
+    response_format=ResponseFormat,
+    model_base_url="http://..." # if needed, provide the base URL.
+)
+```
+It is recommended using a large size model, for example, llama3.3:70b for planner agent and use reasoning models such as qwen3:4b for the specialized agents.
+
+See Live Demo of BEM-AI on [Youtube](https://youtu.be/eYhvig792Sc).
+
 ## ⚙️ Prerequisites
 
 Make sure you have the following installed:
 
 - **Python 3.12+**
 - **Streamlit**
-- **automa_ai 0.1.3**
+- **automa_ai 0.2.0**
 - **Async libraries** used in your BEM-AI (e.g. `httpx`, etc.)
 
 To install dependencies:
@@ -37,7 +55,13 @@ pip install -r requirements.txt
 Example `requirements.txt`:
 ```txt
 streamlit
+openstudio
 automa_ai
+```
+
+or you can install the package directly with:
+```bash
+pip install automa_ai[sim_bem_network]
 ```
 
 ---

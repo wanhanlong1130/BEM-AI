@@ -1,7 +1,7 @@
 [project]
 name = "automa_ai"
 version = "0.1.3"
-description = "PNNL Autoflow-AI: Dynamic multi-agent system for building applications"
+description = "PNNL Auto Multi-Agent AI: Dynamic multi-agent system for building applications"
 requires-python = ">=3.12"
 authors = [{name = "Weili Xu", email = "weili.xu@pnnl.gov"}, {name = "Hanlong, Wan", email = "hanlong.wan@pnnl.gov"}]
 license = "BSD-2-Clause"
@@ -33,7 +33,7 @@ packages = [{include = "automa_ai", from = "."}]
 
 # --- Optional dependencies for examples ---
 [project.optional-dependencies]
-sim_bem_network = ["openstudio>=3.10.0"]
+sim_bem_network = ["openstudio>=3.10.0", "streamlit>=1.51.0"]
 sim_chat_demo = ["streamlit>=1.51.0"]
 
 [tool.uv]
