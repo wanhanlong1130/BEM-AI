@@ -64,8 +64,9 @@ class ServiceOrchestrator:
             card=orchestrator_agent_card,
             instructions=orchestrator_config.instruction,
             model_name=orchestrator_config.model_name,
-            agent_type=GenericAgentType.LANGGRAPH,
-            chat_model=orchestrator_config.chat_model
+            agent_type=GenericAgentType.ORCHESTRATOR,
+            chat_model=orchestrator_config.chat_model,
+            model_base_url=orchestrator_config.model_base_url,
         )
 
         orchestrator_a2a_server = A2AAgentServer(orchestrator, orchestrator_agent_card)
