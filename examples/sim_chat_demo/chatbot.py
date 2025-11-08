@@ -25,6 +25,7 @@ In this section, provide a summary based on {blackboard}
 Based on the above information, summarize the work that has performed in this task.
 
 """
+
 CHATBOT_SERVER_URL = "http://localhost:9999/"
 
 skill = AgentSkill(

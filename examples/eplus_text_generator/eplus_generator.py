@@ -16,11 +16,10 @@ from typing import Literal
 
 from automa_ai.agents import GenericLLM, GenericAgentType
 from automa_ai.agents.agent_factory import AgentFactory
-from automa_ai.agents.orchestrator_agent import OrchestratorAgent
 from automa_ai.common.agent_registry import A2AAgentServer
 from automa_ai.common.mcp_registry import MCPServerConfig
 from automa_ai.mcp_servers.eplus_schema.eplus_server import serve
-from automa_ai.network.task_workflow import TaskServiceOrchestrator
+from automa_ai.network.task_local_workflow import TaskServiceOrchestrator
 from automa_ai.common.types import TaskList
 
 logging.basicConfig(level=logging.INFO)

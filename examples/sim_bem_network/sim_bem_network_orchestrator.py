@@ -14,12 +14,12 @@ from typing import Literal
 
 from automa_ai.agents import GenericLLM, GenericAgentType
 from automa_ai.agents.agent_factory import AgentFactory
-from automa_ai.agents.orchestrator_agent import OrchestratorAgent
+from automa_ai.agents.orchestrator_network_agent import OrchestratorConfig
 from automa_ai.common.agent_registry import A2AAgentServer
 from automa_ai.common.mcp_registry import MCPServerConfig
 from app_mcps import model_mcp, os_mcp
-from automa_ai.network.task_workflow import TaskServiceOrchestrator
 from automa_ai.common.types import TaskList
+from automa_ai.network.agentic_network import ServiceOrchestrator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -349,58 +349,53 @@ output_agent = AgentFactory(
     mcp_configs={"oss_schema_mcp": oss_schema_mcp_config}
 )
 
-# Define your orchestrator agent that manages the workflow
-orchestrator = OrchestratorAgent(
-    chat_model=GenericLLM.OLLAMA,
-    model_name="llama3.3:70b",
-    instruction=SUMMARY_COT,
-    model_base_url="http://rc-chat.pnl.gov:11434"
-)
 
-async def bem_agentic_network(user_query:str):
-    # Initialize agentic_network
-    async with TaskServiceOrchestrator(orchestrator=orchestrator, agent_cards_dir = base_dir / "agent_cards") as agentic_network:
-        # Starts with MCP first
-        agentic_network.add_mcp_server(oss_schema_mcp_config)
-        agentic_network.add_mcp_server(oss_model_mcp_config)
 
-        planner_server = A2AAgentServer(planner, agent_card)
-        env_modeler_server = A2AAgentServer(env_modeler, env_agent_card)
-        lighting_server = A2AAgentServer(lighting_modeler, ltg_agent_card)
-        model_template_server = A2AAgentServer(template_modeler, tmp_agent_card)
-        sim_server = A2AAgentServer(simulation_agent, sim_agent_card)
-        output_server = A2AAgentServer(output_agent, output_agent_card)
-
-        agentic_network.add_a2a_server(model_template_server)
-        agentic_network.add_a2a_server(env_modeler_server)
-        agentic_network.add_a2a_server(planner_server)
-        agentic_network.add_a2a_server(lighting_server)
-        agentic_network.add_a2a_server(sim_server)
-        agentic_network.add_a2a_server(output_server)
-        #########################################################################
-        # Begin network
-        #########################################################################
-        print(f"Begin network....")
-        # Start all services and run until shutdown
-        await agentic_network.run()
-        # await agentic_network.user_query("Create an energy model for a new office.", "ctx-001", "ctx-001")
-        # await agentic_network.user_query("I have a model in local directory: /Users/xuwe123/ai/os-std-mod-mcp-server/resources/baseline.osm, I want to update the model window to wall ratio to 0.35", "ctx-001", "ctx-001")
-        # await agentic_network.user_query("I have a model in local directory: /Users/xuwe123/ai/os-std-mod-mcp-server/resources/baseline.osm, Use this model to evaluate the energy savings from reducing window to wall ratio by 10%", "ctx-001", "ctx-001")
-        await agentic_network.user_query(user_query, "ctx-001", None)
-        # await agentic_network.user_query("I want to evaluate the energy savings from reducing window to wall ratio by 10% for a medium office building that is designed according to ASHRAE 90.1 2019 in Tampa Florida", "ctx-001", "ctx-001")
-        # await agentic_network.user_query("I have a model in local directory: /Users/xuwe123/ai/experiment/baseline.osm, I want to evaluate the energy savings by adding daylighting sensors", "ctx-001", "ctx-001")
-if __name__ == "__main__":
-    title = """
-    🛠️  🏢  🏗️  ╔════════════════════════╗
-    🟢           B E M - A I           
-    🛡️  ⚡  💡   ╚════════════════════════╝
-    """
-    print(title)
-    user_query = input(
-        "🛠️ Thank you for using BEM-AI! I am your assistant to help analyze building performance 🏢\n"
-        "💡 You can ask questions such as:\n"
-        "   • 🔹 What is the energy savings from reducing window-to-wall ratio by 10%?\n"
-        "   • 🔹 Create an energy model for a new office.\n\n"
-        "✍️ Your question: "
+async def main():
+    orchestrator_config = OrchestratorConfig(
+        chat_model=GenericLLM.OLLAMA,
+        model_name="llama3.3:70b",
+        instruction=SUMMARY_COT,
+        model_base_url="http://rc-chat.pnl.gov:11434"
     )
-    asyncio.run(bem_agentic_network(user_query))
+
+    automa_network = ServiceOrchestrator(orchestrator_config=orchestrator_config, agent_cards_dir = base_dir / "agent_cards")
+    automa_network.add_mcp_server(oss_schema_mcp_config)
+    automa_network.add_mcp_server(oss_model_mcp_config)
+
+    planner_server = A2AAgentServer(planner, agent_card)
+    env_modeler_server = A2AAgentServer(env_modeler, env_agent_card)
+    lighting_server = A2AAgentServer(lighting_modeler, ltg_agent_card)
+    model_template_server = A2AAgentServer(template_modeler, tmp_agent_card)
+    sim_server = A2AAgentServer(simulation_agent, sim_agent_card)
+    output_server = A2AAgentServer(output_agent, output_agent_card)
+
+    automa_network.add_a2a_server(planner_server)
+    automa_network.add_a2a_server(env_modeler_server)
+    automa_network.add_a2a_server(lighting_server)
+    automa_network.add_a2a_server(model_template_server)
+    automa_network.add_a2a_server(sim_server)
+    automa_network.add_a2a_server(output_server)
+
+    await automa_network.run()
+    print("✅ Network started...")
+    print("Type 'exit' or 'stop' to shut down.")
+
+    loop = asyncio.get_event_loop()
+    stop_event = asyncio.Event()
+
+    async def wait_for_input():
+        while True:
+            cmd = await loop.run_in_executor(None, input, "> ")
+            if cmd.strip().lower() in {"exit", "stop", "quit"}:
+                stop_event.set()
+                break
+
+    await wait_for_input()
+    print("🛑 Stopping server...")
+    await automa_network.shutdown_all()
+    print("🧹 MCP and A2A Servers stopped cleanly.")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

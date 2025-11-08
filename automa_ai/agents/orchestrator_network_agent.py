@@ -7,25 +7,31 @@ from a2a.types import (
     TaskState,
     TaskArtifactUpdateEvent, DataPart, TextPart,
 )
+from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
+from pydantic import BaseModel
 
 from automa_ai.agents import GenericLLM
-from automa_ai.agents.agent_factory import resolve_chat_model
 from automa_ai.common.response_parser import extract_and_parse_json
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.workflow import WorkflowGraph, WorkflowNode, Status
 
 logging.basicConfig(
-    filename="orchestrator_agent.json.log",
+    filename="orchestrator_agent.log",
     filemode="w",  # Overwrite each run
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
 
+class OrchestratorConfig(BaseModel):
+    chat_model: GenericLLM
+    model_name: str
+    instruction: str
+    model_base_url: str
 
-class OrchestratorAgent(BaseAgent):
+class OrchestratorNetworkAgent(BaseAgent):
     """
     Orchestrator Agent - The agent manages one task workflow.
     In the end, the agent will review the final task and decide whether it needs to reboot planner
@@ -34,9 +40,13 @@ class OrchestratorAgent(BaseAgent):
 
     """
 
-    def __init__(self, chat_model: GenericLLM, model_name: str, instruction: str, model_base_url: str | None = None):
+    def __init__(
+            self,
+            instructions: str,
+            chat_model: BaseChatModel
+        ):
         super().__init__(
-            agent_name="OrchestratorAgent",
+            agent_name="Orchestrator Agent",
             description="Facilitate inter agent communication",
             content_types=["text", "text/plain"],
         )
@@ -47,8 +57,8 @@ class OrchestratorAgent(BaseAgent):
         )  # shared memory on task specs, data format shall come from planner's response
         self.query_history = []
         self.context_id = None
-        self.summary_instruction = instruction
-        self.chat_model = resolve_chat_model(chat_model, model_name, model_base_url)
+        self.summary_instruction = instructions
+        self.chat_model = chat_model
 
     async def review_task_outcome(self) -> str:
         pass
@@ -154,6 +164,7 @@ class OrchestratorAgent(BaseAgent):
             # Resume workflow, used when the workflow nodes are updated.
             should_resume_workflow = False
             async for chunk in self.graph.run_workflow(start_node_id=start_node_id):
+                print(chunk)
                 if isinstance(chunk.root, SendStreamingMessageSuccessResponse):
                     # The graph node returned TaskStatusUpdateEvent
                     # Check if the node is complete and continue to the next node
@@ -163,46 +174,43 @@ class OrchestratorAgent(BaseAgent):
                         logger.info(
                             f"Streaming message from task updates: {task_status_event}"
                         )
+                        # If the node is completed, then move to the next node
                         if (
                             task_status_event.status.state == TaskState.completed
                             and context_id
                         ):
-                            ## yield??
+                            # yield chunk
                             continue
                         if task_status_event.status.state == TaskState.input_required:
                             question = task_status_event.status.message.parts[
                                 0
                             ].root.text
-                            try:
-                                # autonomous agent
-                                #    answer = self.answer_user_question(question)
-                                #    logger.info(f"Agent Answer {answer}")
-                                # User interaction setup
-                                answer_text = input(
-                                    f"❓ Agent responded: {question}\n💬 Your response: "
-                                )
-                                answer = {"can_answer": "yes", "answer": answer_text}
-                                logger.info(f"User Answer: {answer}")
-                                start_node_id = self.graph.paused_node_id
-                                self.set_node_attributes(
-                                    node_id=start_node_id, query=answer_text
-                                )
-                                should_resume_workflow = True
-                            except Exception as e:
-                                logger.info("Cannot convert answer data")
+                            start_node_id = self.graph.paused_node_id
+                            yield {
+                                "response_type": "text",
+                                "is_task_complete": False,
+                                "require_user_input": True,
+                                "content": question,
+                            }
 
                         if task_status_event.status.state == TaskState.working:
                             message = task_status_event.status.message.parts[0].root.text
-                            print(f"🧠 Agent Thinking: {message}")
-                            ## yield??
-                            continue
+                            # print(f"🧠 Agent Thinking: {message}")
+                            yield {
+                                "response_type": "text",
+                                "is_task_complete": False,
+                                "require_user_input": False,
+                                "content": f"🧠 Agent Reasoning: {message}",
+                            }
                     # The graph node returned TaskArtifactUpdateEvent
                     # Store the node and continue
                     if isinstance(chunk.root.result, TaskArtifactUpdateEvent):
                         artifact = chunk.root.result.artifact
+                        agent_name = artifact.name
                         # self.results.append(artifact)
                         if isinstance(artifact.parts[0].root, TextPart):
                             text = artifact.parts[0].root.text
+                            report_text = f"{agent_name}:\n\n {text}"
                             if text.startswith("<think>"):
                                 # attempt extract
                                 _, parsed = extract_and_parse_json(text)
@@ -211,12 +219,20 @@ class OrchestratorAgent(BaseAgent):
                                         # if the returned text generated response and response status is completed, update the blackboard.
                                         self.graph.update_blackboard(parsed.get("blackboard"))
                             self.results.append(artifact.parts[0].root.text)
+                            yield {
+                                "response_type": "text",
+                                "is_task_complete": False,
+                                "require_user_input": False,
+                                "content": report_text,
+                            }
                         # if artifact.name == "Planner Agent-result":
                         if isinstance(artifact.parts[0].root, DataPart):
                             artifact_data = artifact.parts[0].root.data
+                            response_text = ""
                             # update blackboard
                             if artifact_data.get("blackboard"):
                                 self.graph.update_blackboard(artifact_data.get("blackboard"))
+                                response_text += f"Backboard update: {artifact_data.get('blackboard')} \n\n"
                             # update history
                             if artifact_data.get("results"):
                                 self.results.append(artifact.parts[0].root.data.get("results"))
@@ -224,6 +240,7 @@ class OrchestratorAgent(BaseAgent):
                                 self.results.append(artifact.parts[0].root)
                             # any task detected.
                             if artifact.parts[0].root.data.get("tasks"):
+                                response_text += "Planner suggest tasks: \n"
                                 # Planning agent returned data, update graph.
                                 logger.info(
                                     f"Updating workflow with {artifact_data} task nodes"
@@ -233,6 +250,7 @@ class OrchestratorAgent(BaseAgent):
                                 # print(artifact_data)
                                 for idx, task_data in enumerate(artifact_data["tasks"]):
                                     # distribute relevant modeling tasks.
+                                    response_text += f"- {task_data} \n"
                                     node = self.add_graph_node(
                                         task_id=str(idx),
                                         context_id=context_id,
@@ -245,6 +263,12 @@ class OrchestratorAgent(BaseAgent):
                                     if idx == 0:
                                         should_resume_workflow = True
                                         start_node_id = node.id
+                            yield {
+                                "response_type": "text",
+                                "is_task_complete": False,
+                                "require_user_input": False,
+                                "content": f"{agent_name}: \n\n {response_text}",
+                            }
 
                         else:
                             self.results.append(artifact)
@@ -258,14 +282,20 @@ class OrchestratorAgent(BaseAgent):
 
                 if not should_resume_workflow:
                     logger.info("No workflow resume detected, yielding chunk")
+                    # A user may respond in here.
                     # Yield partial execution
-                    yield chunk
+                    yield {
+                        "response_type": "text",
+                        "is_task_complete": False,
+                        "require_user_input": False,
+                        "content": "...",
+                    }
 
                 # print("Resume Workflow", should_resume_workflow)
             # The graph is complete and no updates, so okay to break from the loop.
             if not should_resume_workflow:
                 logger.info(
-                    "Workflow iteration complete and no restart requested. Existing main loop."
+                    "Workflow iteration complete and no restart requested. Exiting main loop."
                 )
                 break
             else:

@@ -2,50 +2,100 @@ import asyncio
 import logging
 from typing import Dict, Any
 
+from a2a.types import AgentSkill, AgentCard, AgentCapabilities
+
+from automa_ai.agents import GenericAgentType
+from automa_ai.agents.agent_factory import AgentFactory
+from automa_ai.agents.orchestrator_network_agent import OrchestratorConfig
 from automa_ai.common.agent_registry import A2AServerManager, A2AAgentServer
-from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.file_util import verify_directory_and_json_files
 from automa_ai.common.mcp_registry import MCPServerManager, MCPServerConfig
-from automa_ai.mcp_servers.server import serve
+from automa_ai.mcp_servers.agent_card_server import serve
 
 logger = logging.getLogger(__name__)
 
 
 class ServiceOrchestrator:
-    def __init__(self, orchestrator: BaseAgent, agent_cards_dir: str):
+    def __init__(self, orchestrator_config: OrchestratorConfig, agent_cards_dir: str, orchestrator_port: int = 10000, agent_card_port: int = 10100):
         """
         :param orchestrator: orchestrator agent
         :param agent_cards_dir: directory to agent cards.
         """
         self.mcp_manager = MCPServerManager()
         self.a2a_manager = A2AServerManager()
-        self.orchestrator = orchestrator
+        self.port_list = []
         # Check agent_card_validity
+        self.orchestrator_port = orchestrator_port
+        self.agent_card_port = agent_card_port
+        self.orchestrator_config = orchestrator_config
 
         assert verify_directory_and_json_files(agent_cards_dir), "Invalid or empty directory"
 
+        self._init_agent_card_mcp(agent_cards_dir)
+        self._init_orchestrator_agent(orchestrator_config)
+
+    def _init_orchestrator_agent(self, orchestrator_config: OrchestratorConfig):
+        # Develop Agent Card
+
+        skill = AgentSkill(
+            id="executor",
+            name="Task Executor",
+            description="Orchestrates the task generation and execution, takes help from the planner to generate tasks",
+            tags=["execute plan"],
+            examples=["Plan my trip to London, submit an expense report."],
+        )
+
+        # --8<-- [start:AgentCard]
+        # This will be the public-facing agent card
+        orchestrator_agent_card = AgentCard(
+            name="Orchestrator Agent",
+            description="Orchestrates the task generation and execution.",
+            url=f"http://localhost:{self.orchestrator_port}/",
+            version="1.0.0",
+            default_input_modes=["text"],
+            default_output_modes=["text"],
+            capabilities=AgentCapabilities(streaming=True, push_notifications=True, state_transition_history=False),
+            skills=[skill],  # Only the basic skill for the public card
+            supports_authenticated_extended_card=False,
+        )
+
+        orchestrator = AgentFactory(
+            card=orchestrator_agent_card,
+            instructions=orchestrator_config.instruction,
+            model_name=orchestrator_config.model_name,
+            agent_type=GenericAgentType.ORCHESTRATOR,
+            chat_model=orchestrator_config.chat_model,
+            model_base_url=orchestrator_config.model_base_url,
+        )
+
+        orchestrator_a2a_server = A2AAgentServer(orchestrator, orchestrator_agent_card)
+        self.a2a_manager.add_server(orchestrator_a2a_server)
+
+    def _init_agent_card_mcp(self, agent_cards_dir: str):
         agent_card_mcp_config = MCPServerConfig(
             name="a2a-agent-cards",
             host="localhost",
-            port=10100,
+            port=self.agent_card_port,
             serve=serve,
             transport="sse",
             agent_cards_dir=agent_cards_dir
         )
         self.add_mcp_server(agent_card_mcp_config)
+        return True
 
     def add_mcp_server(self, config: MCPServerConfig):
         """Add an MCP server configuration"""
+        assert config.port not in self.port_list, f"Port {config.port} is occupied in the network, please change to another port for {config.name}."
+        self.port_list.append(config.port)
         self.mcp_manager.add_server(config)
+        return True
 
     def add_a2a_server(self, server: A2AAgentServer):
         """Add an A2A agent server"""
-        logger.info(f"Adding agent server: {server.name}")
-        return self.a2a_manager.add_server(server)
-
-
-    async def user_query(self, query: str, context_id: str, task_id: str):
-        raise NotImplementedError()
+        assert server.port not in self.port_list, f"Port {server.port} is occupied in the network, please change to another port for {server.name}."
+        self.port_list.append(server.port)
+        self.a2a_manager.add_server(server)
+        return True
 
     async def start_all(self):
         """Start all services in proper order"""
