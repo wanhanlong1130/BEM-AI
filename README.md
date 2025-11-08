@@ -108,7 +108,7 @@ Project configuration is managed through `pyproject.toml`. Key configuration are
 See [README](./examples/sim_chat_demo/README.md)
 
 #### Simple BEM typical building Network
-
+See [README](./examples/sim_bem_network/README.md)
 
 ## 🔍 Development Guidelines
 

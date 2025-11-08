@@ -29,7 +29,7 @@ class OrchestratorConfig(BaseModel):
     chat_model: GenericLLM
     model_name: str
     instruction: str
-    model_base_url: str
+    model_base_url: str | None = None
 
 class OrchestratorNetworkAgent(BaseAgent):
     """

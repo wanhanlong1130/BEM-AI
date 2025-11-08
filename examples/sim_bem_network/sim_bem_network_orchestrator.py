@@ -349,6 +349,11 @@ output_agent = AgentFactory(
     mcp_configs={"oss_schema_mcp": oss_schema_mcp_config}
 )
 
+###Sample Questions
+### 1. I have a model in local directory: /Users/xuwe123/ai/os-std-mod-mcp-server/resources/baseline.osm, I want to update the model window to wall ratio to 0.35
+### 2. I have a model in local directory: /Users/xuwe123/ai/os-std-mod-mcp-server/resources/baseline.osm, Use this model to evaluate the energy savings from reducing window to wall ratio by 10%
+### 3. I want to evaluate the energy savings from reducing window to wall ratio by 10% for a medium office building that is designed according to ASHRAE 90.1 2019 in Tampa Florida.
+### 4. I have a model in local directory: /Users/xuwe123/ai/experiment/baseline.osm, I want to evaluate the energy savings by adding daylighting sensors
 
 
 async def main():
