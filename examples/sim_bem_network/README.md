@@ -116,7 +116,15 @@ The client communicates with the server in real time, displaying streamed model 
 
 <img src="../../sources/bem-agentic.png" alt="BEM-Agents" width="500">
 
-To run this example, users will need to provide your own language models when creating agents
+#### Foundational Framework
+The AUTOMA-AI framework serves as the foundational infrastructure for BEM-AI, enabling distributed coordination among specialized AI agents for engineering applications. Developed at **Pacific Northwest National Laboratory (PNNL)**, **AUTOMA-AI** is a dynamic multi-agent network system built on Google’s **Agent-to-Agent (A2A)** and Anthropic’s **Model Context Protocol (MCP)** standards. It integrates **LangChain**, **LangGraph**, and **Google GenAI** to provide a flexible orchestration layer that allows agents to communicate, share memory, and coordinate tasks through standardized interfaces. The architecture centers on an **Orchestrator Agent** that manages workflow execution and agent discovery via an Agent Card Service, supported by **shared task memory**, **planning**, and **summarization agents**. Specialized agents interact through A2A for communication and MCP for tool and context access, enabling cross-model interoperability and modular agent composition.
+
+In essence, AUTOMA-AI implements a dynamic multi-agent architecture that supports runtime adaptability and evolving graph structures—agents can be added, removed, or reconfigured without halting system execution. This allows it to serve as a backbone for complex, data-driven engineering workflows such as energy modeling, simulation, and compliance checking. The framework is open source and available on GitHub under **PNNL’s BEM-AI** repository
+, and the design is further described in Xu et al. (2025) [SSRN 5447218](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5447218).
+
+#### BEM-AI in action
+To reproduce the BEM-AI experiment, users need to instantiate agents within the AUTOMA-AI framework using their own language models. Each agent is initialized through the AgentFactory class, which specifies its configuration, reasoning instructions, and underlying large language model (LLM). A minimal setup example for creating the planner agent is shown below:
+
 ```python
 planner = AgentFactory(
     card=agent_card,
@@ -128,7 +136,7 @@ planner = AgentFactory(
     model_base_url="http://..." # if needed, provide the base URL.
 )
 ```
-It is recommended using a large size model, for example, llama3.3:70b for planner agent and use reasoning models such as qwen3:4b for the specialized agents.
+It is recommended to use a large-scale reasoning model (e.g., `llama3.3:70b`) for the planner agent, as it handles multi-step task decomposition and workflow orchestration. In contrast, lightweight or specialized reasoning models (e.g., `qwen3:4b`) are suitable for domain-specific agents such as energy modeling, material analysis, or compliance checking. This modular setup allows users to adapt the framework to available local or cloud-hosted models while maintaining interoperability across different agent types and backends.
 
 See Live Demo of BEM-AI on [Youtube](https://youtu.be/eYhvig792Sc).
 
