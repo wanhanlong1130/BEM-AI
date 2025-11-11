@@ -45,10 +45,12 @@ Most of us have already used agents — often without realizing it.
 When you interact with **ChatGPT in a browser**, or **Claude through the desktop app**, you’re engaging with one form of agent.  
 These are conversational or **chat-based agents**, designed to respond to human queries in natural language.
 
-But AI agents can go further.  
-The next generation — known as **tool-using agents** — can call APIs, run code, access databases, or control simulation environments to accomplish tasks autonomously.  
-They don’t just *talk* about doing something — they actually *do* it.
------
+But AI agents can go further.
+The next generation - Known as **tool agents** - can call APIs, run code, access databases, or control simulation environments to accomplish tasks autonomously.
+They don't just *talk* about doing something - they actually *do* it.
+
+---
+
 ### Agentic Architectures
 The development of agentic AI has progressed through **three major architectural** paradigms, each reflecting a different balance between autonomy, control, and scalability.
 
