@@ -1,10 +1,20 @@
 import asyncio
+import os
+from pathlib import Path
+
 import streamlit as st
+from dotenv import load_dotenv
+
 from automa_ai.client.simple_client import (
     SimpleClient,
 )  # assuming your file is named simple_client.py
 
-A2A_SERVER_URL = "http://localhost:9999"
+
+base_dir = Path(__file__).resolve().parent
+env_path = base_dir / '.env'
+load_dotenv(dotenv_path=env_path)
+
+A2A_SERVER_URL = os.getenv("CHATBOT_SERVER_URL")
 
 
 # Cache the client instance

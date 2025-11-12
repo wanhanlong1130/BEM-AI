@@ -6,9 +6,11 @@
 import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 
 from a2a.types import AgentCard
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from typing import Literal
 
@@ -27,6 +29,8 @@ logger = logging.getLogger(__name__)
 # Find the directory where this script is located
 # Pointing to automa_ai
 base_dir = Path(__file__).resolve().parent
+env_path = base_dir / '.env'
+load_dotenv(dotenv_path=env_path)
 
 ########################################################################################
 ######## Prompts #######################################################################
@@ -250,6 +254,8 @@ oss_model_mcp_config = MCPServerConfig(
 
 #########################################################################################
 ###### Define a planner agent that plans the tasks ######################################
+planner_model_name = os.getenv("PLANNER_MODEL_NAME")
+planner_model_base_url = os.getenv("PLANNER_MODEL_BASE_URL")
 class ResponseFormat(BaseModel):
     status: Literal["input_required", "completed", "error"] = "input_required"
     question: str = Field(description="Input needed from the user to generate the plan")
@@ -264,15 +270,16 @@ with Path.open(agent_card_path) as file:
 planner = AgentFactory(
     card=agent_card,
     instructions=PLANNER_COT,
-    model_name="llama3.3:70b",
+    model_name=planner_model_name,
     agent_type=GenericAgentType.LANGGRAPH,
     chat_model=GenericLLM.OLLAMA,
     response_format=ResponseFormat,
-    model_base_url="http://rc-chat.pnl.gov:11434"
+    model_base_url=planner_model_base_url
 )
 
 #########################################################################################
 ##### Define Speciality agents ###############################################################
+model_name = os.getenv("SPECIALIZED_AGENT_MODEL_NAME")
 # Load geometry agent.
 # Compute full path to the agent card file
 env_agent_card_path = base_dir / "agent_cards/envelope_agent.json"
@@ -283,7 +290,7 @@ with Path.open(env_agent_card_path) as file:
 env_modeler = AgentFactory(
     card=env_agent_card,
     instructions=ENVELOPE_COT,
-    model_name="qwen3:4b",
+    model_name=model_name,
     agent_type=GenericAgentType.LANGGRAPH,
     chat_model=GenericLLM.OLLAMA,
     mcp_configs={"oss_schema_mcp": oss_schema_mcp_config}
@@ -298,7 +305,7 @@ with Path.open(tmp_agent_card_path) as file:
 template_modeler = AgentFactory(
     card=tmp_agent_card,
     instructions=TEMPLATE_COT,
-    model_name="qwen3:4b",
+    model_name=model_name,
     agent_type=GenericAgentType.LANGGRAPH,
     chat_model=GenericLLM.OLLAMA,
     mcp_configs={"oss_model_mcp": oss_model_mcp_config}
@@ -313,7 +320,7 @@ with Path.open(ltg_agent_card_path) as file:
 lighting_modeler = AgentFactory(
     card=ltg_agent_card,
     instructions=LIGHTING_COT,
-    model_name="qwen3:4b",
+    model_name=model_name,
     agent_type=GenericAgentType.LANGGRAPH,
     chat_model=GenericLLM.OLLAMA,
     mcp_configs={"oss_schema_mcp": oss_schema_mcp_config}
@@ -328,7 +335,7 @@ with Path.open(sim_agent_card_path) as file:
 simulation_agent = AgentFactory(
     card=sim_agent_card,
     instructions=SIMULATION_COT,
-    model_name="qwen3:4b",
+    model_name=model_name,
     agent_type=GenericAgentType.LANGGRAPH,
     chat_model=GenericLLM.OLLAMA,
     mcp_configs={"oss_schema_mcp": oss_schema_mcp_config}
@@ -343,7 +350,7 @@ with Path.open(output_agent_card_path) as file:
 output_agent = AgentFactory(
     card=output_agent_card,
     instructions=OUTPUT_COT,
-    model_name="qwen3:4b",
+    model_name=model_name,
     agent_type=GenericAgentType.LANGGRAPH,
     chat_model=GenericLLM.OLLAMA,
     mcp_configs={"oss_schema_mcp": oss_schema_mcp_config}
@@ -359,9 +366,9 @@ output_agent = AgentFactory(
 async def main():
     orchestrator_config = OrchestratorConfig(
         chat_model=GenericLLM.OLLAMA,
-        model_name="llama3.3:70b",
+        model_name=planner_model_name,
         instruction=SUMMARY_COT,
-        model_base_url="http://rc-chat.pnl.gov:11434"
+        model_base_url=planner_model_base_url
     )
 
     automa_network = ServiceOrchestrator(orchestrator_config=orchestrator_config, agent_cards_dir = base_dir / "agent_cards")
