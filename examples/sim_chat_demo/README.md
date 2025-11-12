@@ -55,6 +55,11 @@ streamlit
 automa_ai
 ```
 
+## Preparation
+### Update local env file
+Create a `.env` file in the root folder, using the [example.env](./example.env) as an example to specify language models, API keys, URLs.
+
+
 ---
 
 ## ▶️ How to Run

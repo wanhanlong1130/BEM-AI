@@ -171,6 +171,33 @@ pip install automa_ai[sim_bem_network]
 
 ---
 
+## Preparation
+### Update local env file
+Create a `.env` file in the root folder, using the [example.env](./example.env) as an example to specify language models, API keys, URLs and your local openstudio application path.
+
+### Update sample models
+Sample models such as [MediumOffice-90.1-2016-ASHRAE169-2013-2A.osm](./app_mcps/models/MediumOffice-90.1-2016-ASHRAE169-2013-2A.osm) has a path to weather file.
+In the file, look for keyword **OS:WeatherFile** and update the weather URL to your local weather file directory.
+Example below:
+
+```bash
+OS:WeatherFile,
+  {2ff9bc59-5f2e-47e7-a90a-2054c165f27f}, !- Handle
+  Tampa-MacDill AFB,                      !- City
+  FL,                                     !- State Province Region
+  USA,                                    !- Country
+  TMY3,                                   !- Data Source
+  747880,                                 !- WMO Number
+  27.85,                                  !- Latitude {deg}
+  -82.52,                                 !- Longitude {deg}
+  -5,                                     !- Time Zone {hr}
+  8,                                      !- Elevation {m}
+  /Users/xuwe123/github/openstudio-standards/data/weather/USA_FL_Tampa-MacDill.AFB.747880_TMY3.epw, !- Url
+  08A73550,                               !- Checksum
+  ,                                       !- Start Date Actual Year
+  Sunday;                                 !- Start Day of Week
+```
+
 ## ▶️ How to Run
 
 ### Option 1: Run both (recommended)
