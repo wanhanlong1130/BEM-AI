@@ -14,12 +14,15 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from typing import Literal
 
+from automa_ai.agents.orchestrator_network_agent import OrchestratorConfig
+from automa_ai.network.agentic_network import ServiceOrchestrator
+from eplus_schema.eplus_server import serve
+
 from automa_ai.agents import GenericLLM, GenericAgentType
 from automa_ai.agents.agent_factory import AgentFactory
 from automa_ai.common.agent_registry import A2AAgentServer
 from automa_ai.common.mcp_registry import MCPServerConfig
-from automa_ai.mcp_servers.eplus_schema.eplus_server import serve
-from automa_ai.network.task_local_workflow import TaskServiceOrchestrator
+from automa_ai.network.task_local_workflow import TaskLocalServiceOrchestrator
 from automa_ai.common.types import TaskList
 
 logging.basicConfig(level=logging.INFO)
@@ -188,12 +191,10 @@ with Path.open(agent_card_path) as file:
 planner = AgentFactory(
     card=agent_card,
     instructions=PLANNER_INSTRUCTION,
-    # model_name="qwen3:14b",
-    model_name="llama3.3:70b",
+    model_name="qwen3:14b", # replace with your own model
     agent_type=GenericAgentType.LANGGRAPH,
     chat_model=GenericLLM.OLLAMA,
     response_format=ResponseFormat,
-    model_base_url="http://rc-chat.pnl.gov:11434"
 )
 
 #########################################################################################
@@ -216,13 +217,9 @@ with Path.open(obj_drafter_agent_card_path) as file:
 object_drafter = AgentFactory(
     card=obj_drafter_agent_card,
     instructions=OBJECT_DRAFTER,
-    #model_name="qwen3:14b",
-    model_name="o3-mini-birthright",
+    model_name="qwen3:14b", # replace with your own model
     agent_type=GenericAgentType.LANGGRAPH,
-    # chat_model=GenericLLM.OLLAMA,
-    # model_base_url="http://rc-chat.pnl.gov:11434",
-    chat_model = GenericLLM.OPENAI,
-    model_base_url="https://ai-incubator-api.pnnl.gov",
+    chat_model=GenericLLM.OLLAMA,
     api_key=API_KEY,
     mcp_configs={"eplus_schema_mcp": eplus_schema_mcp_config},
 )
@@ -236,44 +233,51 @@ with Path.open(reviewer_agent_card_path) as file:
 reviewer = AgentFactory(
     card=reviewer_agent_card,
     instructions=REVIEWER_DRAFTER,
-    model_name="o3-mini-birthright",
-    # model_name="qwen3:14b",
+    model_name="qwen3:14b", # replace with your own model
     agent_type=GenericAgentType.LANGGRAPH,
-    # chat_model=GenericLLM.OLLAMA,
-    chat_model=GenericLLM.OPENAI,
-    model_base_url="https://ai-incubator-api.pnnl.gov",
-    api_key=API_KEY,
+    chat_model=GenericLLM.OLLAMA,
     mcp_configs={"eplus_schema_mcp": eplus_schema_mcp_config},
 )
 
-# Define your orchestrator agent that manages the workflow
-orchestrator = OrchestratorAgent(
-    chat_model=GenericLLM.OLLAMA,
-    model_name="llama3.3:70b",
-    instruction=SUMMARY_INSTRUCTION,
-    model_base_url="http://rc-chat.pnl.gov:11434"
-)
+## Sample question: Generate a simple building IDF file in EnergyPlus. I need the geometry to be completed. The geometry is a simple box 20 meters long and 20 meters wide, and 5 meters high. It is a simple thermal zone. Use default constructions or standard materials. You can only generate the geometry and constructions and materials, No need HVAC system or lighting or other objects.
 
-async def bem_agentic_network():
-    # Initialize agentic_network
-    async with TaskServiceOrchestrator(orchestrator=orchestrator, agent_cards_dir = base_dir / "agent_cards") as agentic_network:
-        # Starts with MCP first
-        agentic_network.add_mcp_server(eplus_schema_mcp_config)
+async def main():
+    # Define your orchestrator agent that manages the workflow
+    orchestrator_config = OrchestratorConfig(
+        chat_model=GenericLLM.OLLAMA,
+        model_name="qwen3:14b", # replace with your own model
+        instruction=SUMMARY_INSTRUCTION
+    )
 
-        planner_server = A2AAgentServer(planner, agent_card)
-        drafter_server = A2AAgentServer(object_drafter, obj_drafter_agent_card)
-        reviewer_server = A2AAgentServer(reviewer, reviewer_agent_card)
-        agentic_network.add_a2a_server(drafter_server)
-        agentic_network.add_a2a_server(reviewer_server)
-        agentic_network.add_a2a_server(planner_server)
-        #########################################################################
-        # Begin network
-        #########################################################################
-        print(f"Begin network....")
-        # Start all services and run until shutdown
-        await agentic_network.run()
-        await agentic_network.user_query("Generate a simple building IDF file in EnergyPlus. I need the geometry to be completed. The geometry is a simple box 20 meters long and 20 meters wide, and 5 meters high. It is a simple thermal zone. Use default constructions or standard materials. You can only generate the geometry and constructions and materials, No need HVAC system or lighting or other objects.", "ctx-001", "ctx-001")
+    automa_network = ServiceOrchestrator(orchestrator_config=orchestrator_config, agent_cards_dir = base_dir / "agent_cards")
+    automa_network.add_mcp_server(eplus_schema_mcp_config)
+
+    planner_server = A2AAgentServer(planner, agent_card)
+    drafter_server = A2AAgentServer(object_drafter, obj_drafter_agent_card)
+    reviewer_server = A2AAgentServer(reviewer, reviewer_agent_card)
+    automa_network.add_a2a_server(drafter_server)
+    automa_network.add_a2a_server(reviewer_server)
+    automa_network.add_a2a_server(planner_server)
+
+    await automa_network.run()
+    print("✅ Network started...")
+    print("Type 'exit' or 'stop' to shut down.")
+
+    loop = asyncio.get_event_loop()
+    stop_event = asyncio.Event()
+
+    async def wait_for_input():
+        while True:
+            cmd = await loop.run_in_executor(None, input, "> ")
+            if cmd.strip().lower() in {"exit", "stop", "quit"}:
+                stop_event.set()
+                break
+
+    await wait_for_input()
+    print("🛑 Stopping server...")
+    await automa_network.shutdown_all()
+    print("🧹 MCP and A2A Servers stopped cleanly.")
 
 
 if __name__ == "__main__":
-    asyncio.run(bem_agentic_network())
+    asyncio.run(main())

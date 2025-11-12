@@ -38,6 +38,7 @@ sim_chat_demo = ["streamlit>=1.51.0"]
 
 [tool.uv]
 dev-dependencies = [
+    "notebook>=7.4.7",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "black>=25.9.0",

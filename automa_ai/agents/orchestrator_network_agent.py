@@ -29,7 +29,7 @@ class OrchestratorConfig(BaseModel):
     chat_model: GenericLLM
     model_name: str
     instruction: str
-    model_base_url: str
+    model_base_url: str | None = None
 
 class OrchestratorNetworkAgent(BaseAgent):
     """
@@ -218,7 +218,7 @@ class OrchestratorNetworkAgent(BaseAgent):
                                     if parsed.get("status") and parsed["status"] == "completed" and parsed.get("blackboard"):
                                         # if the returned text generated response and response status is completed, update the blackboard.
                                         self.graph.update_blackboard(parsed.get("blackboard"))
-                            self.results.append(artifact.parts[0].root.text)
+                            self.results.append(text)
                             yield {
                                 "response_type": "text",
                                 "is_task_complete": False,
@@ -240,7 +240,7 @@ class OrchestratorNetworkAgent(BaseAgent):
                                 self.results.append(artifact.parts[0].root)
                             # any task detected.
                             if artifact.parts[0].root.data.get("tasks"):
-                                response_text += "Planner suggest tasks: \n"
+                                response_text += "Generated Task(s): \n"
                                 # Planning agent returned data, update graph.
                                 logger.info(
                                     f"Updating workflow with {artifact_data} task nodes"

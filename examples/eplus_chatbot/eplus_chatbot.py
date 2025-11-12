@@ -7,14 +7,13 @@ from pathlib import Path
 from a2a.types import AgentCard
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+from eplus_schema.eplus_server import serve
 
 from automa_ai.agents import GenericAgentType, GenericLLM
 from automa_ai.agents.agent_factory import AgentFactory
-from automa_ai.agents.orchestrator_local_agent import OrchestratorLocalAgent
 from automa_ai.common.agent_registry import A2AAgentServer
 from automa_ai.common.mcp_registry import MCPServerConfig
 from automa_ai.common.types import PlannerTask
-from automa_ai.mcp_servers.eplus_schema.eplus_server import serve
 from automa_ai.network.chat_network import ChatServiceOrchestrator
 
 logging.basicConfig(level=logging.INFO)
