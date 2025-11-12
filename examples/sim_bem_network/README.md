@@ -54,7 +54,7 @@ They don't just *talk* about doing something - they actually *do* it.
 ### Agentic Architectures
 The development of agentic AI has progressed through **three major architectural** paradigms, each reflecting a different balance between autonomy, control, and scalability.
 
-<img src="../../sources/typical_agentic_sys_architecture.png" alt="Agent-Archi" width="500">
+<img src="../../sources/typical_agentic_sys_architecture.png" alt="Agent-Archi" width="700">
 
 #### 1. All-in-One (Single Agent) Architecture
 This is the simplest form, where a single, powerful model performs all reasoning and execution tasks.
@@ -67,7 +67,6 @@ Frameworks such as **AWS Step Functions** and **Google Cloud Workflows** exempli
 Systems like **CoSearchAgent**, **AI Scientist**, and **Agent Laboratory** demonstrate strong predictability and transparency — yet they remain rigid, requiring manual definitions and struggling to adapt to changing goals or unexpected dependencies.
 
 #### 3. Dynamic Multi-Agent Architecture
-
 Dynamic systems represent the newest frontier.
 Here, agents are **modular and reconfigurable**, capable of forming or dissolving connections at runtime.
 Frameworks such as **LangGraph Multi-Agent Swarm**, **OpenManus AI**, **OWL**, and **DRAMA** enable this flexibility through runtime orchestration, agent discovery, and evolving graph structures.
@@ -90,6 +89,8 @@ Now, imagine applying that same paradigm to **building energy modeling (BEM)** �
 This is where our work begins.
 
 To bridge this gap, we introduce **BEM-AI** — a **dynamic multi-agent framework** for autonomous building energy modeling.
+
+<img src="../../sources/bem-agentic.png" alt="BEM-Agents" width="700">
 
 BEM-AI decomposes modeling tasks into smaller, specialized agents coordinated by a **central planner**.  
 Unlike static multi-agent systems, workflows **emerge dynamically** based on user intent and system context.  
@@ -115,11 +116,10 @@ The following sections describe the **BEM-AI architecture**, the **proof of conc
 
 The client communicates with the server in real time, displaying streamed model responses as they arrive.
 
-
-<img src="../../sources/bem-agentic.png" alt="BEM-Agents" width="500">
-
 #### Foundational Framework
 The AUTOMA-AI framework serves as the foundational infrastructure for BEM-AI, enabling distributed coordination among specialized AI agents for engineering applications. Developed at **Pacific Northwest National Laboratory (PNNL)**, **AUTOMA-AI** is a dynamic multi-agent network system built on Google’s **Agent-to-Agent (A2A)** and Anthropic’s **Model Context Protocol (MCP)** standards. It integrates **LangChain**, **LangGraph**, and **Google GenAI** to provide a flexible orchestration layer that allows agents to communicate, share memory, and coordinate tasks through standardized interfaces. The architecture centers on an **Orchestrator Agent** that manages workflow execution and agent discovery via an Agent Card Service, supported by **shared task memory**, **planning**, and **summarization agents**. Specialized agents interact through A2A for communication and MCP for tool and context access, enabling cross-model interoperability and modular agent composition.
+
+<img src="../../sources/architecture.png" alt="BEM-Agents" width="900">
 
 In essence, AUTOMA-AI implements a dynamic multi-agent architecture that supports runtime adaptability and evolving graph structures—agents can be added, removed, or reconfigured without halting system execution. This allows it to serve as a backbone for complex, data-driven engineering workflows such as energy modeling, simulation, and compliance checking. The framework is open source and available on GitHub under **PNNL’s BEM-AI** repository
 , and the design is further described in Xu et al. (2025) [SSRN 5447218](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5447218).
@@ -142,6 +142,39 @@ It is recommended to use a large-scale reasoning model (e.g., `llama3.3:70b`) fo
 
 See Live Demo of BEM-AI on [Youtube](https://youtu.be/eYhvig792Sc).
 
+### Context Engineering
+**Context engineering** is an emerging research and engineering discipline gaining traction alongside the rise of agentic AI. While often confused with prompt engineering, the two serve distinct but complementary roles.
+**Prompt engineering** focuses on crafting the textual inputs provided to a LLM, guiding its reasoning, personality, and formatting. These prompts might include *instructions*, *role specifications*, and *step-by-step reasoning chain* designed to shape a single interaction or task response. **Context engineering**, on the other hand, addresses the broader environment in which agents operate. It involves fine-tuning the contextual information that surrounds and supports agents, ensuring that each component of an agentic AI system behaves coherently and interoperates effectively. 
+This includes configuring **system-level instructions**, **tool interfaces**, **memory strategies**, and **inter-agent communication metadata**. In **BEM-AI**, we primarily optimized three types of context to improve agent performance and coordination.
+
+#### A Semi-automated process to context engineering the multi-agent building energy modeling network. Yellow blocks indicate a manual step and blue blocks show automated steps
+<img src="../../sources/context_engineering_diagram.png" alt="BEM-Agents" width="800">
+
+#### Table: Typical errors captured by log analyzer
+| **Error Type**           | **Category**         | **Typical Observation**                                      | **Action**                                      |
+|---------------------------|---------------------|--------------------------------------------------------------|------------------------------------------------|
+| **Tool crash**            | Tool Failure        | AI: Tried to run the tool...                                 | Debug the tool                                 |
+| **Missing tool**          | Tool Failure        | AI: I could use a tool ... to do ...                         | Develop a tool to meet the AI's ask            |
+| **Wrong tool**            | Tool Failure        | AI: I will use the tool ... (incorrect)                      | Update tool's name and description             |
+| **Wrong agent**           | Agent Card Failure  | Find agent for task ... (incorrect)                          | Update agent card context                      |
+| **Over-reasoning**        | Agent               | AI: User does not provide but I think ...                    | Prompt refinement                              |
+| **Wrong task order**      | Agent               | Task list is in an incorrect order                           | Prompt refinement                              |
+| **Missing tasks**         | Agent               | There are missing task steps                                 | Upscale LLM or enhance specialty agent         |
+| **Inefficient reasoning** | Agent               | LLM trapped in reasoning       
+
+See optimized prompts in the [server script](./sim_bem_network_orchestrator.py).
+
+### Evaluation
+**Test 1 user request**: *I want to evaluate the energy savings from reducing window to wall ratio by 10% for a medium office building that is designed according to ASHRAE 90.1 2019 in Tampa Florida.*
+
+**Test 2 user request**: *I have a model in local directory: /Users/xuwe123/ai/os-std-mod-mcp-server/resources/baseline.osm, Use this model to evaluate the energy savings from reducing window to wall ratio by 10%*
+
+Repeated running the user request and analyze the token consumptions
+
+<img src="../../sources/token_consumption.png" alt="BEM-Agents" width="800">
+
+---
+# Action
 ## ⚙️ Prerequisites
 
 Make sure you have the following installed:
