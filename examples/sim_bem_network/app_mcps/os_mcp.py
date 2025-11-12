@@ -5,19 +5,25 @@ import shutil
 import subprocess
 import sys
 from datetime import datetime
+from pathlib import Path
 
 import openstudio
+from dotenv import load_dotenv
 from mcp.server import FastMCP
 from mcp.server.fastmcp.utilities.logging import get_logger
 from openstudio import BoundingBox, Point3d, Transformation
 from openstudio.openstudiomodelgeometry import DaylightingControl
+
+env_path = Path(__file__).resolve().parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
+
 
 logger = get_logger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 MCP_NAME = "openstudio_mcp"
 
-OPENSTUDIOCLI = "/Applications/OpenStudio-3.10.0/bin/openstudio"
+OPENSTUDIOCLI = os.getenv("OPENSTUDIO_APPLICATION_PATH")
 
 def serve(host, port, transport):
     """Initialize and runs the agent cards mcp_servers server.
