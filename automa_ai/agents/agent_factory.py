@@ -6,7 +6,7 @@ from google.adk.models.lite_llm import LiteLlm
 from langchain_anthropic import ChatAnthropic
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 
 from automa_ai.agents import GenericAgentType, GenericLLM
 from automa_ai.agents.adk_agent import GenericADKAgent
@@ -28,7 +28,8 @@ def resolve_chat_model(backend: GenericLLM, model_name: str, base_url: str | Non
         return ChatOpenAI(model=model_name, base_url=base_url, api_key=api_key, temperature=0, streaming=True)
     elif backend == GenericLLM.CLAUDE:
         assert api_key, "You must provide an API key to access Anthropic Claude model"
-        return ChatAnthropic(model_name=model_name, base_url=base_url, temperature=0, api_key=api_key, timeout=None, stop=["}"])
+        key = SecretStr(api_key)
+        return ChatAnthropic(model_name=model_name, base_url=base_url, temperature=0, api_key=key, timeout=None, stop=["}"])
     elif backend == GenericLLM.LITELLAMA:
         return LiteLlm(model=model_name)
     else:
@@ -57,6 +58,9 @@ class AgentFactory:
         self.mcp_configs = mcp_configs
         self.model_base_url = model_base_url
         self.api_key = api_key
+
+    def get_agent(self):
+        return self.__call__()
 
     def __call__(self) -> BaseAgent:
         chat_model = resolve_chat_model(self.chat_model, self.model_name, self.model_base_url, self.api_key)
