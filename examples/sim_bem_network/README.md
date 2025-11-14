@@ -1,17 +1,14 @@
 # 💬 BEM-AI (Autonomous OpenStudio Energy Modeling)
+Development of a dynamic multi-agent network for building energy modeling: A case study towards scalable and autonomous energy modeling 
 
+[link](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5447218)
 ## Problem Statement: Complexity and Opportunity in Building Energy Modeling (BEM)
 
-Building Energy Modeling (BEM) is one of the most powerful tools we have for predicting building energy performance.  
-However, traditional simulation workflows are **complex, time-consuming, and expertise-intensive**.  
-Producing accurate results often requires coordination between architects, engineers, and simulation specialists — each managing different tools, file formats, and datasets.
+- **BEM is powerful but complex** — traditional workflows require multi-disciplinary expertise, manual coordination, and significant time to produce accurate simulations.
 
-Meanwhile, **rapid advances in Artificial Intelligence (AI)** are reshaping how complex technical workflows can be automated and scaled.  
-AI offers new ways to bring **autonomy, reasoning, and task coordination** to processes that are often iterative, data-heavy, and error-prone.  
+- **AI is transforming technical workflows**, enabling automation, structured reasoning, and faster iteration in data-heavy engineering tasks.
 
-One emerging direction is the use of **agentic AI** — systems of specialized AI agents coordinated by a central planner.  
-These agents can reason about modeling objectives, invoke domain-specific tools, and communicate dynamically across otherwise incompatible systems.  
-In this work, we explore how such an agentic approach can **simplify and scale** BEM through automation and adaptive orchestration.
+- **Agentic AI offers a scalable solution** — specialized agents, coordinated by a central planner, can reason about objectives, run tools, and streamline end-to-end BEM processes.
 
 ---
 
@@ -38,7 +35,7 @@ There is a growing need for an AI-driven framework that is **both adaptive and p
 > — *Jensen Huang, NVIDIA GTC Keynote, 2025*
 
 In recent years, the term **AI agent** has become central to how we think about the future of artificial intelligence.  
-An *agent* can be thought of as an autonomous system — one that **perceives its environment, makes decisions, and takes actions** to achieve specific goals.  
+An *agent* can be thought of as an autonomous system — one that **perceives its environment, makes decisions, and takes actions** to achieve **specific goals**.  
 Unlike a simple program, an agent can reason, adapt, and collaborate with other agents or tools.
 
 Most of us have already used agents — often without realizing it.  
@@ -46,7 +43,7 @@ When you interact with **ChatGPT in a browser**, or **Claude through the desktop
 These are conversational or **chat-based agents**, designed to respond to human queries in natural language.
 
 But AI agents can go further.
-The next generation - Known as **tool agents** - can call APIs, run code, access databases, or control simulation environments to accomplish tasks autonomously.
+The next generation - Known as **tool agents** - can call APIs, run code, access databases, or control energy simulations to accomplish tasks autonomously.
 They don't just *talk* about doing something - they actually *do* it.
 
 ---
@@ -75,13 +72,13 @@ Such architectures allow workflows to emerge dynamically based on user intent, m
 ---
 ### Why Dynamic Matters
 
-Dynamic multi-agent systems are **future-proof** by design.
-As frontier LLMs evolve and frameworks like LangChain or LangGraph undergo frequent structural changes, static pipelines or monolithic “know-it-all” agents risk obsolescence.
-By contrast, dynamic systems emphasize **context engineering** — defining interactions through high-level task logic rather than fixed node connections.
-This abstraction isolates changes to individual agents, enabling seamless upgrades, replacements, or specialization without disrupting the overall workflow.
+Why Dynamic Multi-Agent Systems?
 
-However, this flexibility comes with new challenges: **effective coordination**, **robust communication**, and **standardized protocols** are essential for managing tool access, secure data exchange, and structured interaction across heterogeneous environments.
-These challenges motivate frameworks like **BEM-AI**, which integrate standardized communication protocols — such as **Agent-to-Agent (A2A)** and **Model Context Protocol (MCP)** — to orchestrate dynamic, interoperable agent networks for building energy modeling and beyond.
+- **Future-proof and adaptable** — dynamic agents rely on high-level task logic rather than fixed workflows, allowing seamless upgrades or replacements as LLMs and frameworks evolve.
+
+- **Modular and resilient** — changes remain isolated to individual agents, avoiding the brittleness of static pipelines or monolithic models.
+
+- **Require strong coordination** — frameworks like BEM-AI, powered by A2A and MCP protocols, provide the communication and orchestration infrastructure needed for secure, reliable multi-agent collaboration.
 
 ---
 ### BEM-AI
