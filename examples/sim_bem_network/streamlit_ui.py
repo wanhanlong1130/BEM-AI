@@ -22,8 +22,8 @@ async def send_message_async(user_message: str, context_id: str | None = None):
 
 
 def main():
-    st.set_page_config(page_title="Automa AI Chat", page_icon="💬", layout="centered")
-    st.title("💬 Automa AI Chat Interface")
+    st.set_page_config(page_title="BEM AI Chat", page_icon="💬", layout="centered")
+    st.title("💬 BEM AI Chat Interface")
 
     if "messages" not in st.session_state:
         st.session_state["messages"] = []

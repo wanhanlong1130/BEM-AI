@@ -4,7 +4,7 @@ from json import JSONDecodeError
 from typing import Dict, AsyncIterable, Any
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, ToolMessage, HumanMessage
+from langchain_core.messages import AIMessage, ToolMessage
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.checkpoint.memory import MemorySaver
 from langchain.agents import create_agent
@@ -80,8 +80,10 @@ class GenericLangGraphReactAgent(BaseAgent):
 
     async def invoke(self, query, sessionId):
         config = {"configurable": {"thread_id": sessionId}}
-        await self.graph.ainvoke({"messages": [("user", query)]}, config)
-        return self.get_agent_response(config)
+        if not self.graph:
+            await self.init_graph()
+        response = await self.graph.ainvoke({"messages": [("user", query)]}, config)
+        return response
 
     async def stream(self, query, sessionId, task_id) -> AsyncIterable[dict[str, Any]]:
         inputs = {"messages": [{"role": "user", "content": query}]}
@@ -221,5 +223,38 @@ class GenericLangGraphReactAgent(BaseAgent):
                                 "is_task_complete": False,
                                 "require_user_input": True,
                                 "content": f"Unable to determine next steps. Please try again. item {data['messages'][-1]}",
+                            }
+                        elif isinstance(message, AIMessage) and message.tool_calls:
+                            tool_call_str = ""
+                            for tool_call in message.tool_calls:
+                                tool_call_str += f"Making tool calls: **{tool_call.get('name')}**:\n\n"
+                                tool_call_str += f"**Arguments**: {tool_call.get('args')}\n\n"
+
+                            yield{
+                                "response_type": "text",
+                                "is_task_complete": False,
+                                "require_user_input": False,
+                                "content": tool_call_str,
+                            }
+                elif step == "tools":
+                    print("Debug Event: ", data)
+                    if "messages" in data:
+                        # Take out the last Tool Message
+                        tool_msg = data["messages"][-1]
+                        if tool_msg.content:
+                            content = f"**Tool {tool_msg.name} responded**: {tool_msg.content}\n"
+                            yield{
+                                "response_type": "text",
+                                "is_task_complete": False,
+                                "require_user_input": False,
+                                "content": content,
+                            }
+                        else:
+                            # Fall back
+                            yield {
+                                "response_type": "text",
+                                "is_task_complete": False,
+                                "require_user_input": False,
+                                "content": f"Tool call {tool_msg.name} has no content return or failed. check logs.",
                             }
 
