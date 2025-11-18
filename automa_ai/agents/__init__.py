@@ -3,7 +3,8 @@ from enum import Enum
 
 class GenericAgentType(Enum):
     ADK = "adk"
-    LANGGRAPH = "langgraph"
+    LANGGRAPH = "langgraph-task"
+    LANGGRAPHCHAT = "langgraph-chat"
     ORCHESTRATOR = "orchestrator"
 
 

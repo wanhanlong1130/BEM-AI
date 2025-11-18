@@ -1,10 +1,10 @@
 import logging
 import re
 from json import JSONDecodeError
-from typing import Dict, AsyncIterable, Any
+from typing import Dict, AsyncIterable, Any, Callable
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.checkpoint.memory import MemorySaver
 from langchain.agents import create_agent
@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.response_parser import extract_and_parse_json
 from automa_ai.common.types import ServerConfig
+from automa_ai.metrics.collector import MetricsCollector
 
 memory = MemorySaver()
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s | %(levelname)-8s | "
@@ -30,6 +31,9 @@ class GenericLangGraphReactAgent(BaseAgent):
         chat_model: BaseChatModel,
         response_format: type[BaseModel] | None,
         mcp_servers: Dict[str, ServerConfig] | None = None,
+        retriever: Callable | None = None,
+        enable_metrics: bool = False,
+        debug: bool = False,
     ):
 
         logger.info("Initializing a LangGraph react agent")
@@ -45,9 +49,13 @@ class GenericLangGraphReactAgent(BaseAgent):
         self.client = None
         self.graph = None
         self.mcp_servers = mcp_servers
+        self.retriever = retriever
+        self.debug = debug
+        if enable_metrics:
+            self.metrics = MetricsCollector()
 
     async def init_graph(self):
-        """Load the agent graph"""
+        """Load the agent graph -> this can be overridden to support static multi-agent setup."""
         logger.info(f"Initializing {self.agent_name} metadata")
         if self.mcp_servers:
             # Loading mcp server clients.
@@ -67,7 +75,8 @@ class GenericLangGraphReactAgent(BaseAgent):
         if self.client:
             tools = await self.client.get_tools()
             for tool in tools:
-                # print(self.agent_name, f"Loaded tools {tool.name}")
+                if self.debug:
+                    print(self.agent_name, f"Loaded tools {tool.name}")
                 logger.info(f"Loaded tools {tool.name}")
 
         self.graph = create_agent(
@@ -85,21 +94,44 @@ class GenericLangGraphReactAgent(BaseAgent):
         response = await self.graph.ainvoke({"messages": [("user", query)]}, config)
         return response
 
-    async def stream(self, query, sessionId, task_id) -> AsyncIterable[dict[str, Any]]:
-        inputs = {"messages": [{"role": "user", "content": query}]}
-        config = {"configurable": {"thread_id": sessionId}}
+    async def stream(self, query, session_id, task_id) -> AsyncIterable[dict[str, Any]]:
+        # If selected to track metrics
+        if self.metrics:
+            if self.metrics.current_query_id and self.metrics.current_query_id != query:
+                # If a new task, write out the previous task.
+                print(self.metrics.summary_for_query(self.metrics.current_query_id))
+            self.metrics.start_query(task_id)
+        # Optional RAG retrieval
+        context = ""
+        if self.retriever:
+            context = await self.retriever(query)
+
+        # Build augmented user query
+        if context:
+            augmented_query = f"""
+                You are given the following context from the knowledge base:
+                {context}
+                User query:
+                {query}
+            """
+        else:
+            augmented_query = query
+
+        # Assemble message
+        inputs = {"messages": [{"role": "user", "content": augmented_query}]}
+        config = {"configurable": {"thread_id": session_id}}
         logger.info(
-            f"Running planner agent stream for session {sessionId} {task_id} with input {query}"
+            f"Running planner agent stream for session {session_id} {task_id} with input {query}"
         )
         if not self.graph:
             await self.init_graph()
         # seen_messages = set()
         # Collect all streaming messages first
         async for chunk in self.graph.astream(inputs, config, stream_mode="updates"):
-            print("Getting the chunk", chunk)
+            if self.debug:
+                print("Getting the chunk", chunk)
             for step, data in chunk.items():
                 if step == "model":
-                    print("Debug Event: ", data)
                     if "messages" in data:
                         # Take out the last AI Message
                         message = data["messages"][-1]
@@ -109,7 +141,8 @@ class GenericLangGraphReactAgent(BaseAgent):
                         )
                         if isinstance(message, AIMessage) and message.content:
                             content = message.content.strip()
-                            # print(f"Streaming content: {content}")
+                            if self.debug:
+                                print(f"Streaming content: {content}")
                             if content.startswith("<think>") or content.endswith("</think>"):
                                 # Remove <think>...</think> (including newlines and spaces around it)
                                 content = re.sub(r"<think>.*?</think>\s*", "", content, flags=re.DOTALL)
@@ -122,7 +155,6 @@ class GenericLangGraphReactAgent(BaseAgent):
                                 # print("parsed: ", parsed)
                                 if isinstance(parsed, dict):
                                     if parsed.get("type") == "function":
-                                        # I dont know why but I am keep getting this from AI messages.
                                         # Skip this because we need to force this into function call.
                                         continue
                                     if not parsed.get("status"):
@@ -151,7 +183,7 @@ class GenericLangGraphReactAgent(BaseAgent):
                                             "content": parsed["question"],
                                         }
                                     else:
-                                        # we dont know what is the status, it could be just thinking or asking user to clarify
+                                        # we don't know what is the status, it could be just thinking or asking user to clarify
                                         if content.startswith("<think>"):
                                             yield {
                                                 "response_type": "text",
@@ -174,6 +206,8 @@ class GenericLangGraphReactAgent(BaseAgent):
                                         "content": content,
                                     }
                             except JSONDecodeError as jde:
+                                if self.debug:
+                                    print(f"Failed parsing JSON data, error message: {jde}")
                                 logger.info(f"Failed parsing JSON data, error message: {jde}")
                                 if content.startswith("<think>"):
                                     # There should be a better way to handle this through network but
@@ -192,6 +226,8 @@ class GenericLangGraphReactAgent(BaseAgent):
                                         "content": content,
                                     }
                             except AssertionError as ae:
+                                if self.debug:
+                                    print(f"Failed matching the ai message, error message: {ae}")
                                 # cannot parse the message to JSON. return raw msg and ask for user input
                                 logger.info(f"Failed matching the ai message, error message: {ae}")
                                 yield {
@@ -201,6 +237,8 @@ class GenericLangGraphReactAgent(BaseAgent):
                                     "content": content,
                                 }
                             except Exception as e:
+                                if self.debug:
+                                    print(f"Failed matching the ai message, error message: {e}")
                                 logger.info(f"Failed matching the ai message, error message: {e}")
                                 if content.startswith("<think>"):
                                     # There should be a better way to handle this through network but
@@ -237,7 +275,8 @@ class GenericLangGraphReactAgent(BaseAgent):
                                 "content": tool_call_str,
                             }
                 elif step == "tools":
-                    print("Debug Event: ", data)
+                    if self.debug:
+                        print("Debug Event: ", data)
                     if "messages" in data:
                         # Take out the last Tool Message
                         tool_msg = data["messages"][-1]

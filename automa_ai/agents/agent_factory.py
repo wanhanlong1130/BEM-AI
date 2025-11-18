@@ -10,6 +10,7 @@ from pydantic import BaseModel, SecretStr
 
 from automa_ai.agents import GenericAgentType, GenericLLM
 from automa_ai.agents.adk_agent import GenericADKAgent
+from automa_ai.agents.langgraph_chatagent import GenericLangGraphChatAgent
 from automa_ai.agents.orchestrator_network_agent import OrchestratorNetworkAgent
 from automa_ai.agents.react_langgraph_agent import GenericLangGraphReactAgent
 from automa_ai.common.base_agent import BaseAgent
@@ -37,6 +38,23 @@ def resolve_chat_model(backend: GenericLLM, model_name: str, base_url: str | Non
 
 
 class AgentFactory:
+    """
+    Default Agent Factory to create a callable agent
+    Param:
+        card: AgentCard Agent card stored in AgentCard object
+        instruction: str system prompt - system prompt does not accept the prompt template. It is simply an instruction for the agent
+        model_name: str the name of the language model
+        agent_type: GenericAgentType specify the agent type, currently available includes langgraph task and langgraph chat, orchestrator, (google ADK is not tested)
+        chat_model: GenericLLM specify the language model framework, currently supports openai, ollama and claude
+        response_format: BaseModel Response format
+        mcp_configs: Dict[str, MCPServerConfig] | None Default None, mcp servers the agent connect to.
+                Examples: {
+                            "sample_mcp_1": MCPServerConfig(name="sample_mcp", host="localhost", port=10000, transport="sse"),
+                            }
+        retriever: Callable | None = None Default None, knowledge base retrieval function.
+        enable_metrics: bool determine whether metrics tracking per task / query should be enabled or not.
+        debug: bool determine whether debug mode should be enabled or not.
+    """
     def __init__(
         self,
         card: AgentCard,
@@ -48,6 +66,8 @@ class AgentFactory:
         mcp_configs: Dict[str, MCPServerConfig] | None = None,
         model_base_url: str | None = None,
         api_key: str | None = None,
+        enable_metrics: bool = False,
+        debug: bool = False,
     ):
         self.card = card
         self.instructions = instructions
@@ -58,6 +78,8 @@ class AgentFactory:
         self.mcp_configs = mcp_configs
         self.model_base_url = model_base_url
         self.api_key = api_key
+        self.enable_metrics = enable_metrics
+        self.debug = debug
 
     def get_agent(self):
         return self.__call__()
@@ -82,6 +104,17 @@ class AgentFactory:
                 chat_model=chat_model,
                 mcp_servers=mcp_servers
             )
+        elif self.agent_type == GenericAgentType.LANGGRAPHCHAT:
+            return GenericLangGraphChatAgent(
+                agent_name=self.card.name,
+                description=self.card.description,
+                instructions=self.instructions,
+                response_format=self.response_format,
+                chat_model=chat_model,
+                mcp_servers=mcp_servers,
+                enable_metrics = self.enable_metrics,
+                debug=self.debug
+            )
 
         elif self.agent_type == GenericAgentType.LANGGRAPH:
             return GenericLangGraphReactAgent(
@@ -90,7 +123,9 @@ class AgentFactory:
                 instructions=self.instructions,
                 response_format=self.response_format,
                 chat_model=chat_model,
-                mcp_servers=mcp_servers
+                mcp_servers=mcp_servers,
+                enable_metrics = self.enable_metrics,
+                debug = self.debug
             )
 
         elif self.agent_type == GenericAgentType.ORCHESTRATOR:
