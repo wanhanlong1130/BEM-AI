@@ -351,6 +351,7 @@ dependencies = [
     { name = "jwcrypto" },
     { name = "langchain" },
     { name = "langchain-anthropic" },
+    { name = "langchain-chroma" },
     { name = "langchain-community" },
     { name = "langchain-mcp-adapters" },
     { name = "langchain-ollama" },
@@ -399,6 +400,7 @@ requires-dist = [
     { name = "jwcrypto", specifier = ">=1.5.6" },
     { name = "langchain", specifier = ">=1.0.2" },
     { name = "langchain-anthropic", specifier = ">=1.0.0" },
+    { name = "langchain-chroma", specifier = ">=1.0.0" },
     { name = "langchain-community", specifier = ">=0.4.1" },
     { name = "langchain-mcp-adapters", specifier = ">=0.1.11" },
     { name = "langchain-ollama", specifier = ">=1.0.0" },
@@ -2606,6 +2608,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/72/65/89ea83fe8e89381d31e8137b294f1858dea27f82c535553928783f8e669c/langchain_anthropic-1.0.0.tar.gz", hash = "sha256:a4f1168d119fb620f9c36e3db5c9fe632d1a0daee026d1c99234820cea714f32", size = 700946, upload-time = "2025-10-17T14:07:20.021Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/05/59/96b4edcca672875af4e60c3cafc2b6bbd6e9656a965dfb3543c758c0fbce/langchain_anthropic-1.0.0-py3-none-any.whl", hash = "sha256:455094c91d5c1d573830d023c964e1f2f8232e9c6c95df20468c8f9dc4ff9a50", size = 46403, upload-time = "2025-10-17T14:07:19.04Z" },
+]
+
+[[package]]
+name = "langchain-chroma"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "chromadb" },
+    { name = "langchain-core" },
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6c/b5/1dfb361793b217c7e8e791edebf5ecbbcc7fed2e9fd998b452c32c701c1f/langchain_chroma-1.0.0.tar.gz", hash = "sha256:ee82c6fbd0c94e5e9942e3b9302f69deea6c58c0e957ff16de6066d896d7a34a", size = 217313, upload-time = "2025-10-17T15:18:54.557Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/05/fd/36d8d37a257d7f5961cea9ef0e1a9616a4b4fc259cad2cbf02416de90215/langchain_chroma-1.0.0-py3-none-any.whl", hash = "sha256:b7adb991090f066f8d5e746a2d338de3116b192cec3990deef3052b7ea07324c", size = 12458, upload-time = "2025-10-17T15:18:53.325Z" },
 ]
 
 [[package]]
