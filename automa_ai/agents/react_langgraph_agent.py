@@ -14,6 +14,7 @@ from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.response_parser import extract_and_parse_json
 from automa_ai.common.types import ServerConfig
 from automa_ai.metrics.collector import MetricsCollector
+from automa_ai.metrics.extractor import extract_metrics_from_chunk
 
 memory = MemorySaver()
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s | %(levelname)-8s | "
@@ -51,6 +52,7 @@ class GenericLangGraphReactAgent(BaseAgent):
         self.mcp_servers = mcp_servers
         self.retriever = retriever
         self.debug = debug
+        self.metrics = None
         if enable_metrics:
             self.metrics = MetricsCollector()
 
@@ -139,6 +141,15 @@ class GenericLangGraphReactAgent(BaseAgent):
                         logger.info(
                             f"Message type is: {type(message)}, and message is: {isinstance(message, AIMessage)} item type is: {type(data)}"
                         )
+                        if isinstance(message, AIMessage):
+                            if self.metrics:
+                                # Record tracking
+                                if message.response_metadata:
+                                    self.metrics.add(extract_metrics_from_chunk(
+                                        message,
+                                        session_id=session_id,
+                                        query_id=self.metrics.current_query_id
+                                    ))
                         if isinstance(message, AIMessage) and message.content:
                             content = message.content.strip()
                             if self.debug:
