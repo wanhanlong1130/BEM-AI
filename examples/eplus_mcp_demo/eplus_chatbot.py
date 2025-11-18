@@ -110,10 +110,12 @@ chatbot = AgentFactory(
     card=public_agent_card,
     instructions=CHAT_COT,
     model_name=chat_bot_model_name,
-    agent_type=GenericAgentType.LANGGRAPH,
+    agent_type=GenericAgentType.LANGGRAPHCHAT,
     chat_model=GenericLLM.OLLAMA,
     model_base_url=chat_bot_base_url,
-    mcp_configs={"eplus_mcp": eplus_mcp_config}
+    mcp_configs={"eplus_mcp": eplus_mcp_config},
+    enable_metrics=True,
+    debug=True
 )
 
 # Wrap chatbot agent in A2A agent server

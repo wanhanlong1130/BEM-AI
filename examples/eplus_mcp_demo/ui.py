@@ -57,7 +57,7 @@ def main():
                 nonlocal full_response
                 with st.spinner("🤖 Thinking..."):
                     async for chunk in send_message_async(prompt, st.session_state.get("context_id")):
-                        print(chunk)
+                        # print(chunk)
                         text_part = None
 
                         ## Case 1: A2A JSON-RPC result object
