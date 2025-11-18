@@ -155,21 +155,20 @@ public_agent_card = AgentCard(
 chat_bot_model_name = os.environ.get("CHAT_BOT_MODEL_NAME")
 chat_bot_base_url = os.environ.get("CHAT_BOT_MODEL_BASE_URL") or None
 
-print(f"Chat bot model name: {chat_bot_model_name} and base URL: {chat_bot_base_url}")
-
 # Initialize chatbot agent
 chatbot = AgentFactory(
     card=public_agent_card,
     instructions=CHAT_COT,
     model_name=chat_bot_model_name,
-    agent_type=GenericAgentType.LANGGRAPH,
+    agent_type=GenericAgentType.LANGGRAPHCHAT,
     chat_model=GenericLLM.OLLAMA,
     model_base_url=chat_bot_base_url,
+    enable_metrics=True,
+    debug=True
 )
 
-# Wrap chatbot agent in A2A agent server
+# Wrap automa-chatbot agent in A2A agent server
 chatbot_a2a = A2AAgentServer(chatbot, public_agent_card)
-
 # Initialize A2A server manager
 server_manager = A2AServerManager()
 # Add server

@@ -177,7 +177,6 @@ chatbot = AgentFactory(
     mcp_configs={"weather_mcp": weather_mcp_config},
     enable_metrics=True,
     debug=True
-
 )
 
 # Wrap chatbot agent in A2A agent server
