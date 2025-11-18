@@ -1,5 +1,6 @@
 import asyncio
 import os
+import uuid
 from pathlib import Path
 
 import streamlit as st
@@ -8,7 +9,7 @@ from dotenv import load_dotenv
 from automa_ai.client.simple_client import (
     SimpleClient,
 )  # assuming your file is named simple_client.py
-
+from automa_ai.client.ui_util import natural_delay
 
 base_dir = Path(__file__).resolve().parent
 env_path = base_dir / '.env'
@@ -22,11 +23,19 @@ A2A_SERVER_URL = os.getenv("CHATBOT_SERVER_URL")
 def get_client():
     return SimpleClient(agent_url=A2A_SERVER_URL)
 
+# ---------------------------------------------------------------------
+# Create/get a session ID
+# ---------------------------------------------------------------------
+def get_session_id():
+    if "session_id" not in st.session_state:
+        st.session_state["session_id"] = str(uuid.uuid4())
+    return st.session_state["session_id"]
 
-async def send_message_async(user_message: str):
+
+async def send_message_async(user_message: str, session_id: str):
     client = get_client()
     response_chunks = []
-    async for chunk in client.send_streaming_message(user_message):
+    async for chunk in client.send_streaming_message(user_message, session_id):
         response_chunks.append(chunk)
         yield chunk
 
@@ -34,6 +43,9 @@ async def send_message_async(user_message: str):
 def main():
     st.set_page_config(page_title="Automa AI Chat", page_icon="💬", layout="centered")
     st.title("💬 Automa AI Chat Interface")
+
+    # Initialize session ID
+    session_id = get_session_id()
 
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
@@ -57,7 +69,7 @@ def main():
             async def process_stream():
                 nonlocal full_response
                 with st.spinner("🤖 Thinking..."):
-                    async for chunk in send_message_async(prompt):
+                    async for chunk in send_message_async(prompt, session_id):
                         text_part = None
                         if isinstance(chunk, dict) and "result" in chunk:
                             result = chunk.get("result", {})
@@ -82,6 +94,7 @@ def main():
                             text_part = chunk["data"]
 
                         if text_part:
+                            await natural_delay(text_part)
                             full_response += text_part
                             message_placeholder.markdown(full_response + "▌")
 
