@@ -325,7 +325,7 @@ def serve(host, port, transport):
     )
     def retrieve_openstudio_model_annual_site_eui(os_model_path: str) -> dict:
         """
-        Read the simulation's annual site EUI
+        Read the simulation's annual site EUI in kBtu/ft2 unit
         :param os_model_path: [str] file path
         :return: EnergyUseIntensityInfo
         """

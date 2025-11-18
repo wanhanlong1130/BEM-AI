@@ -1,17 +1,26 @@
 import asyncio
+import os
+from pathlib import Path
+
 import streamlit as st
+from dotenv import load_dotenv
+
 from automa_ai.client.simple_client import (
     SimpleClient,
-)  # assuming your file is named simple_client.py
+)
 
-A2A_SERVER_URL = "http://localhost:10000"
+
+base_dir = Path(__file__).resolve().parent
+env_path = base_dir / '.env'
+load_dotenv(dotenv_path=env_path)
+
+A2A_SERVER_URL = os.getenv("CHATBOT_SERVER_URL")
 
 
 # Cache the client instance
 @st.cache_resource
 def get_client():
     return SimpleClient(agent_url=A2A_SERVER_URL)
-
 
 async def send_message_async(user_message: str, context_id: str | None = None):
     client = get_client()
@@ -22,8 +31,8 @@ async def send_message_async(user_message: str, context_id: str | None = None):
 
 
 def main():
-    st.set_page_config(page_title="BEM AI Chat", page_icon="💬", layout="centered")
-    st.title("💬 BEM AI Chat Interface")
+    st.set_page_config(page_title="EnergyPlus AI Chat", page_icon="💬", layout="centered")
+    st.title("💬 EnergyPlus AI Chat Interface")
 
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
@@ -48,7 +57,7 @@ def main():
                 nonlocal full_response
                 with st.spinner("🤖 Thinking..."):
                     async for chunk in send_message_async(prompt, st.session_state.get("context_id")):
-                        print(chunk)
+                        # print(chunk)
                         text_part = None
 
                         ## Case 1: A2A JSON-RPC result object
@@ -91,7 +100,7 @@ def main():
                                     st.session_state["awaiting_input"] = True
                                     full_response += (
                                         f"\n\n🟡 *Agent is waiting for your response...*\n\n"
-                                        f"**Question:** {text_part}"
+                                        f"**Response:** {text_part}"
                                     )
                                     message_placeholder.markdown(full_response)
                                     break  # Stop streaming to wait for user input
@@ -117,7 +126,6 @@ def main():
         st.session_state["messages"].append(
             {"role": "assistant", "content": full_response}
         )
-
 
 if __name__ == "__main__":
     main()

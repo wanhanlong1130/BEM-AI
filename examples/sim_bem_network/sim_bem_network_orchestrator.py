@@ -274,7 +274,9 @@ planner = AgentFactory(
     agent_type=GenericAgentType.LANGGRAPH,
     chat_model=GenericLLM.OLLAMA,
     response_format=ResponseFormat,
-    model_base_url=planner_model_base_url
+    model_base_url=planner_model_base_url,
+    enable_metrics=True,
+    debug = True
 )
 
 #########################################################################################
@@ -293,7 +295,9 @@ env_modeler = AgentFactory(
     model_name=model_name,
     agent_type=GenericAgentType.LANGGRAPH,
     chat_model=GenericLLM.OLLAMA,
-    mcp_configs={"oss_schema_mcp": oss_schema_mcp_config}
+    mcp_configs={"oss_schema_mcp": oss_schema_mcp_config},
+    enable_metrics=True,
+    debug = True
 )
 
 # Load model template agent.
@@ -308,7 +312,9 @@ template_modeler = AgentFactory(
     model_name=model_name,
     agent_type=GenericAgentType.LANGGRAPH,
     chat_model=GenericLLM.OLLAMA,
-    mcp_configs={"oss_model_mcp": oss_model_mcp_config}
+    mcp_configs={"oss_model_mcp": oss_model_mcp_config},
+    enable_metrics=True,
+    debug = True
 )
 
 # Load lighting model agent
@@ -323,7 +329,9 @@ lighting_modeler = AgentFactory(
     model_name=model_name,
     agent_type=GenericAgentType.LANGGRAPH,
     chat_model=GenericLLM.OLLAMA,
-    mcp_configs={"oss_schema_mcp": oss_schema_mcp_config}
+    mcp_configs={"oss_schema_mcp": oss_schema_mcp_config},
+    enable_metrics=True,
+    debug = True
 )
 
 # Load simulation model agent
@@ -338,7 +346,9 @@ simulation_agent = AgentFactory(
     model_name=model_name,
     agent_type=GenericAgentType.LANGGRAPH,
     chat_model=GenericLLM.OLLAMA,
-    mcp_configs={"oss_schema_mcp": oss_schema_mcp_config}
+    mcp_configs={"oss_schema_mcp": oss_schema_mcp_config},
+    enable_metrics=True,
+    debug = True
 )
 
 # EnergyPlus output agent
@@ -353,7 +363,9 @@ output_agent = AgentFactory(
     model_name=model_name,
     agent_type=GenericAgentType.LANGGRAPH,
     chat_model=GenericLLM.OLLAMA,
-    mcp_configs={"oss_schema_mcp": oss_schema_mcp_config}
+    mcp_configs={"oss_schema_mcp": oss_schema_mcp_config},
+    enable_metrics=True,
+    debug = True
 )
 
 ###Sample Questions
