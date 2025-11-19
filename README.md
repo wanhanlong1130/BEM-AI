@@ -105,10 +105,18 @@ Project configuration is managed through `pyproject.toml`. Key configuration are
 
 ## Examples
 #### Single Agent Chatbot with Streamlit UI interface
+This example demonstrates the use of automa-ai for creating a live-streaming chatbot.
+The example uses QWEN3:4B as the language model and a sample MCP server is built to connect with the agent, demonstrating the capabilities of streaming and tool calling using a single chat bot.
 See [README](./examples/sim_chat_demo/README.md)
 
 #### Simple BEM typical building Network
+This example is the prototype of BEM-AI, which consists of multiple agents collaboratively completing a building energy modeling task together.
 See [README](./examples/sim_bem_network/README.md)
+
+### EnergyPlus Chatbot with EnergyPlus MCP server
+This example shows automa-ai integrates with EnergyPlus MCP, developed by LBNL.
+See [README](./examples/eplus_mcp_demo/README.md)
+
 
 ## 🔍 Development Guidelines
 
