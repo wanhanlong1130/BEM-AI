@@ -9,6 +9,7 @@ from langchain.agents import create_agent
 from pydantic import BaseModel
 
 from automa_ai.common.base_agent import BaseAgent
+from automa_ai.common.retriever import BaseRetriever
 from automa_ai.common.types import ServerConfig
 from automa_ai.metrics.collector import MetricsCollector
 from automa_ai.metrics.extractor import extract_metrics_from_chunk
@@ -29,7 +30,7 @@ class GenericLangGraphChatAgent(BaseAgent):
         chat_model: BaseChatModel,
         response_format: type[BaseModel] | None,
         mcp_servers: Dict[str, ServerConfig] | None = None,
-        retriever: Callable | None = None,
+        retriever: BaseRetriever | None = None,
         enable_metrics: bool = False,
         debug: bool = False
     ):
@@ -103,7 +104,7 @@ class GenericLangGraphChatAgent(BaseAgent):
         # Optional RAG retrieval
         context = ""
         if self.retriever:
-            context = await self.retriever(query)
+            context = await self.retriever.asimilarity_search_by_vector(query)
 
         # Build augmented user query
         if context:
@@ -113,6 +114,9 @@ class GenericLangGraphChatAgent(BaseAgent):
                 User query:
                 {query}
             """
+            if self.debug:
+                print(augmented_query)
+                logger.info(f"Augmented query: {augmented_query}")
         else:
             augmented_query = query
 

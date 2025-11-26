@@ -102,7 +102,7 @@ This will:
 
 #### 1️⃣ Start the server
 ```bash
-python chatbot.py
+python energyplus_bot.py
 ```
 
 Once you see:

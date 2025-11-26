@@ -14,7 +14,7 @@ def extract_metrics_from_chunk(
         session_id=session_id,
         query_id=query_id,
 
-        model=rm.get("model") or rm.get("model_name"),
+        model=rm.get("model") or rm.get("model_name") or "genai",
         model_provider=rm.get("model_provider"),
         created_at=rm.get("created_at"),
 

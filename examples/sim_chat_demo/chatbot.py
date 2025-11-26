@@ -43,6 +43,7 @@ skill = AgentSkill(
 
 # --8<-- [start:AgentCard]
 # This will be the public-facing agent card
+# AgentCard and AgentSkill are from Google A2A package
 public_agent_card = AgentCard(
     name="Chat Bot Agent",
     description="An expert in building energy modeling and happy to have a chat with peers.",

@@ -1,3 +1,4 @@
+import abc
 from abc import ABC
 
 from pydantic import BaseModel, Field
@@ -16,3 +17,7 @@ class BaseAgent(BaseModel, ABC):
     description: str = Field(description="A brief description of the agent's purpose.")
 
     content_types: list[str] = Field(description="Supported content types.")
+
+    @abc.abstractmethod
+    async def invoke(self, query, sessionId):
+        raise NotImplementedError()
