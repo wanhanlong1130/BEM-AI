@@ -12,7 +12,7 @@ from automa_ai.client.simple_client import (
 from automa_ai.client.ui_util import natural_delay
 
 base_dir = Path(__file__).resolve().parent
-env_path = base_dir / '.env'
+env_path = base_dir / ".env"
 load_dotenv(dotenv_path=env_path)
 
 A2A_SERVER_URL = os.getenv("CHATBOT_SERVER_URL")
@@ -22,6 +22,7 @@ A2A_SERVER_URL = os.getenv("CHATBOT_SERVER_URL")
 @st.cache_resource
 def get_client():
     return SimpleClient(agent_url=A2A_SERVER_URL)
+
 
 # ---------------------------------------------------------------------
 # Create/get a session ID
