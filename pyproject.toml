@@ -2,52 +2,52 @@
 name = "automa_ai"
 version = "0.2.3"
 description = "PNNL Auto Multi-Agent AI: Dynamic multi-agent system for building applications"
-requires-python = ">=3.12"
+requires-python = "==3.12"
 authors = [{name = "Weili Xu", email = "weili.xu@pnnl.gov"}, {name = "Hanlong, Wan", email = "hanlong.wan@pnnl.gov"}]
 license = "BSD-2-Clause"
 readme = "README.md"
 dependencies = [
-    "a2a-sdk>=0.3.10",
-    "asyncclick>=8.3.0.7",
-    "bs4>=0.0.2",
-    "chromadb>=1.2.2",
-    "deepeval>=3.7.2",
-    "google-adk>=1.17.0",
-    "google-genai>=1.46.0",
-    "httpx>=0.28.1",
-    "jwcrypto>=1.5.6",
-    "langchain>=1.0.2",
-    "langchain-anthropic>=1.0.0",
-    "langchain-chroma>=1.0.0",
-    "langchain-community>=0.4.1",
-    "langchain-google-genai>=3.2.0",
-    "langchain-huggingface>=1.0.1",
-    "langchain-mcp-adapters>=0.1.11",
-    "langchain-ollama>=1.0.0",
-    "langchain-openai>=1.0.1",
-    "langgraph>=1.0.1",
-    "litellm>=1.79.0",
-    "networkx>=3.5",
-    "pandas>=2.3.3",
-    "pydantic>=2.12.3",
-    "pyjwt>=2.10.1",
-    "uvicorn>=0.38.0",
+    "a2a-sdk==0.3.10",
+    "asyncclick==8.3.0.7",
+    "bs4==0.0.2",
+    "chromadb==1.2.2",
+    "deepeval==3.7.2",
+    "google-adk==1.17.0",
+    "google-genai==1.46.0",
+    "httpx==0.28.1",
+    "jwcrypto==1.5.6",
+    "langchain==1.0.2",
+    "langchain-anthropic==1.0.0",
+    "langchain-chroma==1.0.0",
+    "langchain-community==0.4.1",
+    "langchain-google-genai==3.2.0",
+    "langchain-huggingface==1.0.1",
+    "langchain-mcp-adapters==0.1.11",
+    "langchain-ollama==1.0.0",
+    "langchain-openai==1.0.1",
+    "langgraph==1.0.1",
+    "litellm==1.79.0",
+    "networkx==3.5",
+    "pandas==2.3.3",
+    "pydantic==2.12.3",
+    "pyjwt==2.10.1",
+    "uvicorn==0.38.0",
 ]
 packages = [{include = "automa_ai", from = "."}]
 
 # --- Optional dependencies for examples ---
 [project.optional-dependencies]
-sim_bem_network = ["openstudio>=3.10.0", "streamlit>=1.51.0"]
-sim_chat_demo = ["streamlit>=1.51.0"]
-sim_chat_stream_demo = ["streamlit>=1.51.0"]
-eplus_mcp_demo = ["eppy>=0.5.63", "matplotlib>=3.10.7", "plotly>=6.4.0"]
+sim_bem_network = ["openstudio==3.10.0", "streamlit==1.51.0"]
+sim_chat_demo = ["streamlit==1.51.0"]
+sim_chat_stream_demo = ["streamlit==1.51.0"]
+eplus_mcp_demo = ["eppy==0.5.63", "matplotlib==3.10.7", "plotly==6.4.0"]
 
 [tool.uv]
 dev-dependencies = [
-    "notebook>=7.4.7",
-    "pytest>=8.4.2",
-    "pytest-asyncio>=1.2.0",
-    "black>=25.9.0",
+    "notebook==7.4.7",
+    "pytest==8.4.2",
+    "pytest-asyncio==1.2.0",
+    "black==25.9.0",
 ]
 
 [build-system]
