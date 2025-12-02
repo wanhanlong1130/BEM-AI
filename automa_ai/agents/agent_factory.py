@@ -23,7 +23,7 @@ from automa_ai.common.utils import map_mcp_config_to_server_config
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def resolve_chat_model(backend: GenericLLM, model_name: str, base_url: str | None = None, api_key: str | None = None, api_version: str | None = None):
+def resolve_chat_model(backend: GenericLLM, model_name: str, agent_type: GenericAgentType, base_url: str | None = None, api_key: str | None = None, api_version: str | None = None):
 
     if backend == GenericLLM.OLLAMA:
         return ChatOllama(model=model_name, base_url=base_url, temperature=0)
@@ -37,12 +37,13 @@ def resolve_chat_model(backend: GenericLLM, model_name: str, base_url: str | Non
                  raise ValueError(
                      "AzureChatOpenAI requires azure_api_version and azure_deployment"
                  )
+             streaming = True if agent_type is GenericAgentType.LANGGRAPHCHAT else False
              return AzureChatOpenAI(
                  azure_endpoint=base_url,
                  api_key=SecretStr(api_key),
                  api_version=api_version,
                  azure_deployment=model_name,
-                 streaming=True,
+                 streaming=streaming,
              )
          return ChatOpenAI(model=model_name, base_url=base_url, api_key=SecretStr(api_key), temperature=0, streaming=True)
     elif backend == GenericLLM.CLAUDE:
@@ -51,12 +52,14 @@ def resolve_chat_model(backend: GenericLLM, model_name: str, base_url: str | Non
          return ChatAnthropic(model_name=model_name, base_url=base_url, temperature=0, api_key=key, timeout=None, stop=["}"])
     elif backend == GenericLLM.GEMINI:
          assert os.getenv("GOOGLE_API_KEY"), "You must add GOOGLE_API_KEY in the system environment."
+         streaming = True if agent_type is GenericAgentType.LANGGRAPHCHAT else False
          return ChatGoogleGenerativeAI(
              model=model_name,
              temperature=0,
              timeout=None,
              max_retries=2,
-             max_tokens=None
+             max_tokens=None,
+             streaming=streaming,
          )
     elif backend == GenericLLM.LITELLAMA:
          return LiteLlm(model=model_name)
@@ -139,7 +142,7 @@ class AgentFactory:
         return self.__call__()
 
     def __call__(self) -> BaseAgent:
-        chat_model = resolve_chat_model(self.chat_model, self.model_name, self.model_base_url, self.api_key, self.api_version)
+        chat_model = resolve_chat_model(self.chat_model, self.model_name, self.agent_type, self.model_base_url, self.api_key, self.api_version, )
 
         mcp_servers = None
         logger.info(f"Checking MCP servers to the agent: {self.card.name}...")
