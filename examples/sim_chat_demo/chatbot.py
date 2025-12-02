@@ -10,7 +10,7 @@ from automa_ai.agents.agent_factory import AgentFactory
 from automa_ai.common.agent_registry import A2AServerManager, A2AAgentServer
 
 base_dir = Path(__file__).resolve().parent
-env_path = base_dir / '.env'
+env_path = base_dir / ".env"
 load_dotenv(dotenv_path=env_path)
 
 CHAT_COT = """
@@ -43,6 +43,7 @@ skill = AgentSkill(
 
 # --8<-- [start:AgentCard]
 # This will be the public-facing agent card
+# AgentCard and AgentSkill are from Google A2A package
 public_agent_card = AgentCard(
     name="Chat Bot Agent",
     description="An expert in building energy modeling and happy to have a chat with peers.",
@@ -154,17 +155,22 @@ public_agent_card = AgentCard(
 )
 chat_bot_model_name = os.environ.get("CHAT_BOT_MODEL_NAME")
 chat_bot_base_url = os.environ.get("CHAT_BOT_MODEL_BASE_URL") or None
+openai_api_key = os.environ.get("OPENAI_API_KEY")
+openai_model = os.environ.get("OPEN_AI_MODEL_NAME")
+openai_url = os.environ.get("OPENAI_HOST_URL")
 
 # Initialize chatbot agent
 chatbot = AgentFactory(
     card=public_agent_card,
     instructions=CHAT_COT,
-    model_name=chat_bot_model_name,
+    model_name=openai_model,
     agent_type=GenericAgentType.LANGGRAPHCHAT,
-    chat_model=GenericLLM.OLLAMA,
-    model_base_url=chat_bot_base_url,
+    chat_model=GenericLLM.OPENAI,
+    model_base_url=openai_url,
+    api_key=openai_api_key,
+    api_version="2024-12-01-preview",
     enable_metrics=True,
-    debug=True
+    debug=True,
 )
 
 # Wrap automa-chatbot agent in A2A agent server

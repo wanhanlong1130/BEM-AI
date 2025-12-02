@@ -9,7 +9,7 @@ class ModelMetrics(BaseModel):
     query_id: str = Field(description="Query ID")
 
     # Model info
-    model: str = Field(description="Model name")
+    model: str = Field(description="Model name", default=None)
     model_provider: str | None = Field(description="Model provider", default=None)
     created_at: datetime | None = Field(default=None, description="Model timestamp")
 

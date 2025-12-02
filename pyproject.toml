@@ -1,6 +1,6 @@
 [project]
 name = "automa_ai"
-version = "0.2.1"
+version = "0.2.3"
 description = "PNNL Auto Multi-Agent AI: Dynamic multi-agent system for building applications"
 requires-python = ">=3.12"
 authors = [{name = "Weili Xu", email = "weili.xu@pnnl.gov"}, {name = "Hanlong, Wan", email = "hanlong.wan@pnnl.gov"}]
@@ -11,6 +11,7 @@ dependencies = [
     "asyncclick>=8.3.0.7",
     "bs4>=0.0.2",
     "chromadb>=1.2.2",
+    "deepeval>=3.7.2",
     "google-adk>=1.17.0",
     "google-genai>=1.46.0",
     "httpx>=0.28.1",
@@ -19,6 +20,8 @@ dependencies = [
     "langchain-anthropic>=1.0.0",
     "langchain-chroma>=1.0.0",
     "langchain-community>=0.4.1",
+    "langchain-google-genai>=3.2.0",
+    "langchain-huggingface>=1.0.1",
     "langchain-mcp-adapters>=0.1.11",
     "langchain-ollama>=1.0.0",
     "langchain-openai>=1.0.1",
