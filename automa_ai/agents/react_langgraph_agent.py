@@ -151,7 +151,16 @@ class GenericLangGraphReactAgent(BaseAgent):
                                         query_id=self.metrics.current_query_id
                                     ))
                         if isinstance(message, AIMessage) and message.content:
-                            content = message.content.strip()
+                            content = message.content
+                            response_metadata = message.response_metadata
+                            if content and isinstance(content, list):
+                                # likely this is a gemini responses
+                                content = content[0]
+                                if response_metadata and response_metadata['model_provider'] == "google_genai":
+                                    # in this case, it is likely a json inside a list
+                                    if content["type"] == "text" and content["text"]:
+                                        content = content["text"]
+                            content = content.strip()
                             if self.debug:
                                 print(f"Streaming content: {content}")
                             if content.startswith("<think>") or content.endswith("</think>"):

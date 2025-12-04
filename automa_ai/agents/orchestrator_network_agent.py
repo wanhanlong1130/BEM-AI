@@ -42,12 +42,14 @@ class OrchestratorNetworkAgent(BaseAgent):
 
     def __init__(
             self,
+            agent_name: str,
+            description: str,
             instructions: str,
             chat_model: BaseChatModel
         ):
         super().__init__(
-            agent_name="Orchestrator Agent",
-            description="Facilitate inter agent communication",
+            agent_name=agent_name,
+            description=description,
             content_types=["text", "text/plain"],
         )
         self.graph: WorkflowGraph | None = None
@@ -59,6 +61,10 @@ class OrchestratorNetworkAgent(BaseAgent):
         self.context_id = None
         self.summary_instruction = instructions
         self.chat_model = chat_model
+
+    async def invoke(self, query, sessionId):
+        # no actual usage.
+        pass
 
     async def review_task_outcome(self) -> str:
         pass
