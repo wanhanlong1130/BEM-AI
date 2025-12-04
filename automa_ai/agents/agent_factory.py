@@ -142,7 +142,7 @@ class AgentFactory:
         return self.__call__()
 
     def __call__(self) -> BaseAgent:
-        chat_model = resolve_chat_model(self.chat_model, self.model_name, self.agent_type, self.model_base_url, self.api_key, self.api_version, )
+        chat_model = resolve_chat_model(self.chat_model, self.model_name, self.agent_type, self.model_base_url, self.api_key, self.api_version)
 
         mcp_servers = None
         logger.info(f"Checking MCP servers to the agent: {self.card.name}...")
@@ -188,6 +188,8 @@ class AgentFactory:
 
         elif self.agent_type == GenericAgentType.ORCHESTRATOR:
             return OrchestratorNetworkAgent(
+                agent_name=self.card.name,
+                description=self.card.description,
                 instructions=self.instructions,
                 chat_model=chat_model,
             )

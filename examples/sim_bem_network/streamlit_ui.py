@@ -4,7 +4,7 @@ from automa_ai.client.simple_client import (
     SimpleClient,
 )  # assuming your file is named simple_client.py
 
-A2A_SERVER_URL = "http://localhost:10000"
+A2A_SERVER_URL = "http://localhost:10001"
 
 
 # Cache the client instance

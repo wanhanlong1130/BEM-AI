@@ -21,7 +21,7 @@ from automa_ai.common.agent_registry import A2AAgentServer
 from automa_ai.common.mcp_registry import MCPServerConfig
 from app_mcps import model_mcp, os_mcp
 from automa_ai.common.types import TaskList
-from automa_ai.network.agentic_network import ServiceOrchestrator
+from automa_ai.network.agentic_network import ServiceOrchestrator, MultiAgentNetwork
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -368,6 +368,23 @@ output_agent = AgentFactory(
     debug = True
 )
 
+# Orchestrator agent
+orchestrator_agent_card_path = base_dir / "agent_cards/orchestrator_agent.json"
+with Path.open(orchestrator_agent_card_path) as file:
+    data = json.load(file)
+    orchestrator_agent_card = AgentCard(**data)
+
+orchestrator_agent = AgentFactory(
+    card=orchestrator_agent_card,
+    instructions=SUMMARY_COT,
+    model_name=planner_model_name,
+    model_base_url=planner_model_base_url,
+    agent_type=GenericAgentType.ORCHESTRATOR,
+    chat_model=GenericLLM.OLLAMA,
+    enable_metrics=True,
+    debug = True
+)
+
 ###Sample Questions
 ### 1. I have a model in local directory: /Users/xuwe123/ai/os-std-mod-mcp-server/resources/baseline.osm, I want to update the model window to wall ratio to 0.35
 ### 2. I have a model in local directory: /Users/xuwe123/ai/os-std-mod-mcp-server/resources/baseline.osm, Use this model to evaluate the energy savings from reducing window to wall ratio by 10%
@@ -376,17 +393,11 @@ output_agent = AgentFactory(
 
 
 async def main():
-    orchestrator_config = OrchestratorConfig(
-        chat_model=GenericLLM.OLLAMA,
-        model_name=planner_model_name,
-        instruction=SUMMARY_COT,
-        model_base_url=planner_model_base_url
-    )
-
-    automa_network = ServiceOrchestrator(orchestrator_config=orchestrator_config, agent_cards_dir = base_dir / "agent_cards")
+    automa_network = MultiAgentNetwork(agent_cards_dir = base_dir / "agent_cards")
     automa_network.add_mcp_server(oss_schema_mcp_config)
     automa_network.add_mcp_server(oss_model_mcp_config)
 
+    orchestrator_server = A2AAgentServer(orchestrator_agent, orchestrator_agent_card)
     planner_server = A2AAgentServer(planner, agent_card)
     env_modeler_server = A2AAgentServer(env_modeler, env_agent_card)
     lighting_server = A2AAgentServer(lighting_modeler, ltg_agent_card)
@@ -394,6 +405,7 @@ async def main():
     sim_server = A2AAgentServer(simulation_agent, sim_agent_card)
     output_server = A2AAgentServer(output_agent, output_agent_card)
 
+    automa_network.add_entry_agent(orchestrator_server)
     automa_network.add_a2a_server(planner_server)
     automa_network.add_a2a_server(env_modeler_server)
     automa_network.add_a2a_server(lighting_server)
