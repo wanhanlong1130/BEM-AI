@@ -16,12 +16,11 @@ from typing import Literal
 
 from automa_ai.agents import GenericLLM, GenericAgentType
 from automa_ai.agents.agent_factory import AgentFactory
-from automa_ai.agents.orchestrator_network_agent import OrchestratorConfig
 from automa_ai.common.agent_registry import A2AAgentServer
 from automa_ai.common.mcp_registry import MCPServerConfig
 from app_mcps import model_mcp, os_mcp
 from automa_ai.common.types import TaskList
-from automa_ai.network.agentic_network import ServiceOrchestrator, MultiAgentNetwork
+from automa_ai.network.agentic_network import MultiAgentNetwork
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
