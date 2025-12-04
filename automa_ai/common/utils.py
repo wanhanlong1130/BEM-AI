@@ -1,5 +1,7 @@
 import socket
 import time
+import warnings
+from functools import wraps
 
 from automa_ai.common.mcp_registry import MCPServerConfig
 from automa_ai.common.types import ServerConfig
@@ -57,21 +59,35 @@ def get_agent_mcp_server_config() -> ServerConfig:
     )
 
 
-def get_os_model_mcp_server_config() -> ServerConfig:
-    """Get the MCP server configuration."""
-    return ServerConfig(
-        host="localhost",
-        port=10200,  # needs to update when mcp server is up.
-        transport="sse",
-        url="http://localhost:10200/sse",  # needs to update when mcp server is up.
-    )
+def deprecated(message: str):
+    def decorator(obj):
+        if isinstance(obj, type):
+            # It's a class
+            orig_init = obj.__init__
 
+            @wraps(orig_init)
+            def new_init(self, *args, **kwargs):
+                warnings.warn(
+                    f"{obj.__name__} is deprecated: {message}",
+                    DeprecationWarning,
+                    stacklevel=2
+                )
+                return orig_init(self, *args, **kwargs)
 
-def get_os_geo_mcp_server_config() -> ServerConfig:
-    """Get the MCP server configuration."""
-    return ServerConfig(
-        host="localhost",
-        port=10201,  # needs to update when mcp server is up.
-        transport="sse",
-        url="http://localhost:10201/sse",  # needs to update when mcp server is up.
-    )
+            obj.__init__ = new_init
+            return obj
+
+        else:
+            # It's a function
+            @wraps(obj)
+            def wrapper(*args, **kwargs):
+                warnings.warn(
+                    f"{obj.__name__} is deprecated: {message}",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                return obj(*args, **kwargs)
+
+            return wrapper
+
+    return decorator

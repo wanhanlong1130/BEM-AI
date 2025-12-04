@@ -1,8 +1,8 @@
 import logging
-from typing import Dict, AsyncIterable, Any, Callable
+from typing import Dict, AsyncIterable, Any
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
+from langchain_core.messages import AIMessageChunk, ToolMessage
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.checkpoint.memory import MemorySaver
 from langchain.agents import create_agent
@@ -144,11 +144,23 @@ class GenericLangGraphChatAgent(BaseAgent):
                             query_id=self.metrics.current_query_id
                         ))
                 if ck.content:
+                    content = ck.content
+                    response_metadata = ck.response_metadata
+
+                    if content and isinstance(content, list):
+                        # likely this is a gemini responses
+                        content = content[0]
+                        if response_metadata and response_metadata['model_provider'] == "google_genai":
+                            # in this case, it is likely a json inside a list
+                            if content["type"] == "text" and content["text"]:
+                                content = content["text"]
+                    content = content.strip()
+
                     yield {
                         "response_type": "text",
                         "is_task_complete": False,
                         "require_user_input": False,
-                        "content": ck.content,
+                        "content": content,
                     }
                 elif ck.tool_calls:
                     tool_call_str = ""

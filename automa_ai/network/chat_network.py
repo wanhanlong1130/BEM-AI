@@ -3,10 +3,12 @@ import logging
 from a2a.types import SendStreamingMessageSuccessResponse, TaskStatusUpdateEvent, TaskState, TaskArtifactUpdateEvent
 
 from automa_ai.common.base_agent import BaseAgent
+from automa_ai.common.utils import deprecated
 from automa_ai.network.agentic_network import ServiceOrchestrator
 
 logger = logging.getLogger(__name__)
 
+@deprecated("Use MultiAgentNetwork instead. This class will be removed in v0.3.x")
 class ChatServiceOrchestrator(ServiceOrchestrator):
     def __init__(self, orchestrator_agent: BaseAgent, agent_cards_dir: str):
         """
