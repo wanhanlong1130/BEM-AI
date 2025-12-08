@@ -154,7 +154,7 @@ class GenericLangGraphChatAgent(BaseAgent):
                             # in this case, it is likely a json inside a list
                             if content["type"] == "text" and content["text"]:
                                 content = content["text"]
-                    content = content.strip()
+                    # content = content.strip()
 
                     yield {
                         "response_type": "text",
