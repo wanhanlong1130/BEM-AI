@@ -30,10 +30,11 @@ def resolve_chat_model(backend: GenericLLM, model_name: str, agent_type: Generic
     elif backend == GenericLLM.BEDROCK:
         aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
         aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        aws_region = os.getenv("AWS_REGION")
         if aws_access_key_id is None or aws_secret_access_key is None:
-            logger.warning("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are not set")
-            return ChatBedrockConverse(model=model_name, temperature=0)
-        return ChatBedrockConverse(model=model_name, aws_access_key_id=SecretStr(aws_access_key_id), aws_secret_access_key=SecretStr(aws_secret_access_key))
+            logger.warning("AWS_ACCESS_KEY_ID, AWS_REGION, AWS_SECRET_ACCESS_KEY are not set")
+            return ChatBedrockConverse(model=model_name, region_name=aws_region, temperature=0)
+        return ChatBedrockConverse(model=model_name, region_name=aws_region, aws_access_key_id=SecretStr(aws_access_key_id), aws_secret_access_key=SecretStr(aws_secret_access_key))
     elif backend == GenericLLM.OPENAI:
          assert api_key, "You must provide an API key to access OpenAI GPT models"
          # Need support for API key
