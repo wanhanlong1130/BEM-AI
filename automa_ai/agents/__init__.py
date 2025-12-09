@@ -17,3 +17,4 @@ class GenericLLM(Enum):
     GEMINI = "gemini"
     LITELLAMA = "litellm"
     HUGGINGFACE = "huggingface"
+    BEDROCK = "bedrock"
