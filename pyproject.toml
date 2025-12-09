@@ -1,6 +1,6 @@
 [project]
 name = "automa_ai"
-version = "0.2.6"
+version = "0.2.7"
 description = "PNNL Auto Multi-Agent AI: Dynamic multi-agent system for building applications"
 requires-python = ">=3.12"
 authors = [{name = "Weili Xu", email = "weili.xu@pnnl.gov"}, {name = "Hanlong, Wan", email = "hanlong.wan@pnnl.gov"}]
@@ -18,6 +18,7 @@ dependencies = [
     "jwcrypto>=1.5.6",
     "langchain>=1.0.2",
     "langchain-anthropic>=1.0.0",
+    "langchain-aws>=1.1.0",
     "langchain-chroma>=1.0.0",
     "langchain-community>=0.4.1",
     "langchain-google-genai>=3.2.0",

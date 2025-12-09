@@ -5,6 +5,7 @@ from typing import Dict
 from a2a.types import AgentCard
 from google.adk.models.lite_llm import LiteLlm
 from langchain_anthropic import ChatAnthropic
+from langchain_aws import ChatBedrockConverse
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings, AzureChatOpenAI
@@ -24,9 +25,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def resolve_chat_model(backend: GenericLLM, model_name: str, agent_type: GenericAgentType, base_url: str | None = None, api_key: str | None = None, api_version: str | None = None):
-
     if backend == GenericLLM.OLLAMA:
         return ChatOllama(model=model_name, base_url=base_url, temperature=0)
+    elif backend == GenericLLM.BEDROCK:
+        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        if aws_access_key_id is None or aws_secret_access_key is None:
+            logger.warning("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are not set")
+            return ChatBedrockConverse(model=model_name, temperature=0)
+        return ChatBedrockConverse(model=model_name, aws_access_key_id=SecretStr(aws_access_key_id), aws_secret_access_key=SecretStr(aws_secret_access_key))
     elif backend == GenericLLM.OPENAI:
          assert api_key, "You must provide an API key to access OpenAI GPT models"
          # Need support for API key
