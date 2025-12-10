@@ -176,6 +176,11 @@ def _get_logging_config(log_dir: str = "logs") -> LoggingConfigDict:
                 "level": "INFO",
                 "propagate": False,
             },
+            "automa_ai": {
+                "handlers": ["catch_all_file"],
+                "level": "INFO",
+                "propagate": False,
+            },
         },
     }
 
