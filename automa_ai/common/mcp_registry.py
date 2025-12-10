@@ -5,7 +5,6 @@ from multiprocessing import Process
 from typing import Dict, List
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 
 @dataclass

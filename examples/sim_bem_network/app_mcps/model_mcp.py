@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import Union
 
 from mcp.server import FastMCP
-from mcp.server.fastmcp.utilities.logging import get_logger
 
-logger = get_logger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+from automa_ai.common.setup_logging import add_file_handler
+
+logger = logging.getLogger(__name__)
 
 MCP_NAME = "model_mcp"
 
@@ -42,12 +42,8 @@ def serve(host, port, transport):
     mcp = FastMCP(MCP_NAME, host=host, port=port)
 
     log_file = os.path.join("./logs", f"{MCP_NAME}_server_{port}.log")
-    os.makedirs("./logs", exist_ok=True)
-
-    # Redirect stdout and stderr to log file — like `> logfile 2>&1`
-    sys.stdout = open(log_file, "a", buffering=1)
-    sys.stderr = sys.stdout
-
+    add_file_handler(logger=logger, log_file_path=log_file)
+    
     @mcp.tool(
         name="get_climate_by_location",
         description="Get the climate zone by city and state"

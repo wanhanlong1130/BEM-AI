@@ -8,19 +8,14 @@ from pathlib import Path
 import chromadb
 from chromadb.utils import embedding_functions
 from mcp.server import FastMCP
-from mcp.server.fastmcp.utilities.logging import get_logger
+
+from automa_ai.common.setup_logging import add_file_handler
 
 # BASE_DIR = Path(__file__).resolve().parent.parent  # goes from automa_ai/mcp_servers/ -> automa_ai/
 # AGENT_CARDS_DIR = BASE_DIR / "agent_cards"
 MODEL = "ollama_chat/llama3.1:8b"
 
-logging.basicConfig(
-    filename="mcp_server.log",
-    filemode="w",  # Overwrite each run
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 MCP_NAME = "agent_card_mcp"
 
@@ -165,11 +160,7 @@ def serve(host, port, transport, agent_cards_dir: str):
     mcp = FastMCP("agent-cards", host=host, port=port)
 
     log_file = os.path.join("./logs", f"{MCP_NAME}_server_{port}.log")
-    os.makedirs("./logs", exist_ok=True)
-
-    # Redirect stdout and stderr to log file — like `> logfile 2>&1`
-    sys.stdout = open(log_file, "a", buffering=1)
-    sys.stderr = sys.stdout
+    add_file_handler(logger=logger, log_file_path=log_file)
 
     build_agent_card_embeddings(agent_cards_dir)
 

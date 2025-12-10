@@ -14,10 +14,10 @@ from a2a.types import AgentCard
 
 from automa_ai.common.agent_executor import GenericAgentExecutor
 from automa_ai.common.base_agent import BaseAgent
+from automa_ai.common.setup_logging import add_file_handler
 from automa_ai.common.utils import wait_for_port
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 class A2AAgentServer:
     def __init__(self, agent_builder: Callable[[], BaseAgent], card: AgentCard, log_dir: str="./logs"):
@@ -34,11 +34,7 @@ class A2AAgentServer:
 
     def run(self):
         log_file = os.path.join(self.log_dir, f"{self.card.name}_server_{self.port}.log")
-        os.makedirs(self.log_dir, exist_ok=True)
-
-        # Redirect stdout and stderr to log file — like `> logfile 2>&1`
-        sys.stdout = open(log_file, "a", buffering=1)
-        sys.stderr = sys.stdout
+        add_file_handler(logger=logger, log_file_path=log_file)
 
         try:
             logger.info("Building the agent....")

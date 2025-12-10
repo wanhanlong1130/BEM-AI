@@ -3,14 +3,14 @@ import math
 import os
 import shutil
 import subprocess
-import sys
+import logging
 from datetime import datetime
 from pathlib import Path
 
+from automa_ai.common.setup_logging import add_file_handler
 import openstudio
 from dotenv import load_dotenv
 from mcp.server import FastMCP
-from mcp.server.fastmcp.utilities.logging import get_logger
 from openstudio import BoundingBox, Point3d, Transformation
 from openstudio.openstudiomodelgeometry import DaylightingControl
 
@@ -18,8 +18,7 @@ env_path = Path(__file__).resolve().parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
 
-logger = get_logger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 
 MCP_NAME = "openstudio_mcp"
 
@@ -41,9 +40,7 @@ def serve(host, port, transport):
     log_file = os.path.join("./logs", f"{MCP_NAME}_server_{port}.log")
     os.makedirs("./logs", exist_ok=True)
 
-    # Redirect stdout and stderr to log file — like `> logfile 2>&1`
-    sys.stdout = open(log_file, "a", buffering=1)
-    sys.stderr = sys.stdout
+    add_file_handler(logger=logger, log_file_path=log_file)
 
     @mcp.tool(
         name="modify_window_to_wall_ratio",
