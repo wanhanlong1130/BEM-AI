@@ -150,10 +150,13 @@ class GenericLangGraphChatAgent(BaseAgent):
                     if content and isinstance(content, list):
                         # likely this is a gemini responses
                         content = content[0]
-                        if response_metadata and response_metadata['model_provider'] == "google_genai":
+                        if response_metadata and response_metadata['model_provider'] in ["google_genai", "bedrock_converse"]:
                             # in this case, it is likely a json inside a list
                             if content["type"] == "text" and content["text"]:
                                 content = content["text"]
+                            elif content["type"] == "tool_use":
+                                # seems unique to claude - temporary block tool call info first.
+                                content = "-"
                     # content = content.strip()
 
                     yield {
