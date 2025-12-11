@@ -165,7 +165,7 @@ class OrchestratorNetworkAgent(BaseAgent):
             # Resume workflow, used when the workflow nodes are updated.
             should_resume_workflow = False
             async for chunk in self.graph.run_workflow(start_node_id=start_node_id):
-                print(chunk)
+                logger.info(chunk)
                 if isinstance(chunk.root, SendStreamingMessageSuccessResponse):
                     # The graph node returned TaskStatusUpdateEvent
                     # Check if the node is complete and continue to the next node

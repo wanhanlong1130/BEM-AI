@@ -20,7 +20,52 @@ class ExcludePatternsFilter(logging.Filter):
         ) and super().filter(record)
 
 
-def add_file_handler(
+def setup_file_logger(
+    base_log_dir: str,
+    logger_name: str,
+    log_filename: Optional[str] = None,
+    level: int = logging.INFO,
+    file_mode: str = "a",
+    formatter: Optional[logging.Formatter] = None,
+) -> logging.Logger:
+    """
+    Create and configure a logger with a FileHandler.
+
+    Args:
+        base_log_dir: Directory where log files will be stored.
+        logger_name: Name of the logger to create/get.
+        log_filename: Optional filename for the log file.
+            If None, defaults to `<logger_name>.log`.
+        level: Logger and handler level. Defaults to INFO.
+        file_mode: File open mode for the handler (default 'a').
+        formatter: Optional logging.Formatter for the handler.
+            If None, uses a default formatter.
+
+    Returns:
+        The configured Logger instance.
+    """
+    os.makedirs(base_log_dir, exist_ok=True)
+
+    if log_filename is None:
+        log_filename = f"{logger_name}.log"
+
+    log_file_path = os.path.join(base_log_dir, log_filename)
+
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(level)
+
+    _add_file_handler(
+        logger=logger,
+        log_file_path=log_file_path,
+        level=level,
+        mode=file_mode,
+        formatter=formatter,
+    )
+
+    return logger
+
+
+def _add_file_handler(
     logger: logging.Logger,
     log_file_path: str,
     level: int = logging.INFO,
@@ -29,11 +74,11 @@ def add_file_handler(
 ):
     """
     Add a FileHandler to an existing logger instance.
-    
+
     Useful for dynamically adding file handlers at runtime, such as when you
     need log files with names based on runtime parameters (e.g., port numbers,
     process IDs, timestamps).
-    
+
     Args:
         logger: The logger instance to add the handler to.
         log_file_path: Path to the log file. Parent directory will be created
@@ -42,13 +87,9 @@ def add_file_handler(
         mode: File open mode ('a' for append, 'w' for overwrite). Defaults to 'a'.
         formatter: Optional custom formatter. If None, uses the library's
             default format.
-    
+
     Returns:
         The created FileHandler instance (can be used to remove it later).
-    
-    Example:
-        >>> logger = logging.getLogger("automa_ai.mcp_servers.server")
-        >>> handler = add_file_handler(logger, f"logs/server_{port}.log")
     """
     os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
 
@@ -63,6 +104,7 @@ def add_file_handler(
     logger.addHandler(file_handler)
 
     return file_handler
+
 
 def _get_logging_config(log_dir: str = "logs") -> LoggingConfigDict:
     LOGGING_CONFIG = {
@@ -186,7 +228,10 @@ def _get_logging_config(log_dir: str = "logs") -> LoggingConfigDict:
 
     return LOGGING_CONFIG
 
-def _deep_merge_dicts(d1: LoggingConfigDict, d2: LoggingConfigDict) -> LoggingConfigDict:
+
+def _deep_merge_dicts(
+    d1: LoggingConfigDict, d2: LoggingConfigDict
+) -> LoggingConfigDict:
     """
     Merge d2 into d1 without overwriting existing keys in d1
     """
@@ -243,6 +288,7 @@ def build_logging_config(
 
     return _deep_merge_dicts(copy.deepcopy(existing_config), config)
 
+
 def setup_logging(
     log_dir: str = "logs",
     existing_config: Optional[LoggingConfigDict] = None,
@@ -261,5 +307,6 @@ def setup_logging(
         existing_config: An optional existing logging configuration
             dictionary to merge into before applying.
     """
+    print("Logging set")
     config = build_logging_config(log_dir=log_dir, existing_config=existing_config)
     logging.config.dictConfig(config)

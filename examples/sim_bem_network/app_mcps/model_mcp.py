@@ -8,7 +8,6 @@ from typing import Union
 
 from mcp.server import FastMCP
 
-from automa_ai.common.setup_logging import add_file_handler
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +39,6 @@ def serve(host, port, transport):
     """
     logger.info("Starting Energy Model Server")
     mcp = FastMCP(MCP_NAME, host=host, port=port)
-
-    log_file = os.path.join("./logs", f"{MCP_NAME}_server_{port}.log")
-    add_file_handler(logger=logger, log_file_path=log_file)
     
     @mcp.tool(
         name="get_climate_by_location",

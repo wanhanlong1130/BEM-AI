@@ -14,7 +14,6 @@ from a2a.types import AgentCard
 
 from automa_ai.common.agent_executor import GenericAgentExecutor
 from automa_ai.common.base_agent import BaseAgent
-from automa_ai.common.setup_logging import add_file_handler
 from automa_ai.common.utils import wait_for_port
 
 logger = logging.getLogger(__name__)
@@ -28,14 +27,10 @@ class A2AAgentServer:
         self.host_name = parsed_url.hostname
         self.port = parsed_url.port
         self.log_dir = log_dir
-
         self.server: Optional[uvicorn.Server] = None
         self.shutdown_event = asyncio.Event()
 
     def run(self):
-        log_file = os.path.join(self.log_dir, f"{self.card.name}_server_{self.port}.log")
-        add_file_handler(logger=logger, log_file_path=log_file)
-
         try:
             logger.info("Building the agent....")
             agent = self.agent_builder()

@@ -2,14 +2,12 @@
 import json
 import logging
 import os
-import sys
 from pathlib import Path
 
 import chromadb
 from chromadb.utils import embedding_functions
 from mcp.server import FastMCP
 
-from automa_ai.common.setup_logging import add_file_handler
 
 # BASE_DIR = Path(__file__).resolve().parent.parent  # goes from automa_ai/mcp_servers/ -> automa_ai/
 # AGENT_CARDS_DIR = BASE_DIR / "agent_cards"
@@ -120,8 +118,8 @@ def find_best_match(query: str, persist_dir: str = "./chroma_store") -> dict | N
     best_metadata = results["metadatas"][0][0]
     best_distance = results["distances"][0][0]
 
-    print(f"Query text: {query}")
-    print(f"Best match: {best_doc}")
+    logger.info(f"Query text: {query}")
+    logger.info(f"Best match: {best_doc}")
 
     logger.info(f"Best match: {best_uri} (distance={best_distance:.4f})")
     return {
@@ -158,9 +156,6 @@ def serve(host, port, transport, agent_cards_dir: str):
     """
     logger.info("Starting Agent Cards MCP Server")
     mcp = FastMCP("agent-cards", host=host, port=port)
-
-    log_file = os.path.join("./logs", f"{MCP_NAME}_server_{port}.log")
-    add_file_handler(logger=logger, log_file_path=log_file)
 
     build_agent_card_embeddings(agent_cards_dir)
 

@@ -7,7 +7,6 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from automa_ai.common.setup_logging import add_file_handler
 import openstudio
 from dotenv import load_dotenv
 from mcp.server import FastMCP
@@ -36,11 +35,6 @@ def serve(host, port, transport):
     """
     logger.info("Starting OpenStudio Modifier Server")
     mcp = FastMCP(MCP_NAME, host=host, port=port)
-
-    log_file = os.path.join("./logs", f"{MCP_NAME}_server_{port}.log")
-    os.makedirs("./logs", exist_ok=True)
-
-    add_file_handler(logger=logger, log_file_path=log_file)
 
     @mcp.tool(
         name="modify_window_to_wall_ratio",

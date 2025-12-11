@@ -18,8 +18,8 @@ from a2a.utils import new_task, new_agent_text_message
 from a2a.utils.errors import ServerError
 
 from automa_ai.common.base_agent import BaseAgent
+from automa_ai.common.setup_logging import setup_file_logger
 
-logger = logging.getLogger(__name__)
 
 
 class GenericAgentExecutor(AgentExecutor):
@@ -30,9 +30,11 @@ class GenericAgentExecutor(AgentExecutor):
 
     def __init__(self, agent: BaseAgent):
         self.agent = agent
+        self.logger = setup_file_logger(base_log_dir="./logs", logger_name=agent.agent_name)
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        logger.info(f"Executing agent {self.agent.agent_name}")
+        
+        self.logger.info(f"Executing agent {self.agent.agent_name}")
         error = self._validate_request(context)
         if error:
             raise ServerError(error=InvalidParamsError())
@@ -57,13 +59,13 @@ class GenericAgentExecutor(AgentExecutor):
                     await event_queue.enqueue_event(event)
                 continue
 
-            logger.info(f"🔍 We received the item: {item}")
+            self.logger.info(f"🔍 We received the item: {item}")
             is_task_complete = item["is_task_complete"]
             require_user_input = item["require_user_input"]
             # logger.info(f"🔍 Processing item: is_complete={is_task_complete}, require_input={require_user_input}")
 
             if is_task_complete:
-                logger.info(f"🔍 Completing with content: {item['content']}")
+                self.logger.info(f"🔍 Completing with content: {item['content']}")
                 if item["response_type"] == "data":
                     part = DataPart(data=item["content"])
                 else:
@@ -87,7 +89,7 @@ class GenericAgentExecutor(AgentExecutor):
             # Other status continue the loop
             # Only send working update if message is different
             if item["content"] != last_text_sent:
-                logger.info(f"-----Continue updates!: {item['content']}")
+                self.logger.info(f"-----Continue updates!: {item['content']}")
                 await updater.update_status(
                     TaskState.working,
                     new_agent_text_message(

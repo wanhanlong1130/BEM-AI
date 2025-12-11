@@ -34,7 +34,6 @@ class GenericLangGraphChatAgent(BaseAgent):
         debug: bool = False
     ):
 
-        logger.info("Initializing a LangGraph react agent")
         # Remove all empty strings
         super().__init__(
             agent_name=agent_name,

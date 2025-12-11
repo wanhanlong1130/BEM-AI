@@ -4,8 +4,6 @@ import sys
 
 from mcp.server import FastMCP
 
-from automa_ai.common.setup_logging import add_file_handler
-
 logger = logging.getLogger(__name__)
 
 MCP_NAME = "chat_mcp"
@@ -24,9 +22,6 @@ def serve(host, port, transport):
     """
     logger.info("Starting MCP Model Server")
     mcp = FastMCP(MCP_NAME, host=host, port=port)
-
-    log_file = os.path.join("./logs", f"{MCP_NAME}_server_{port}.log")
-    add_file_handler(logger=logger, log_file_path=log_file)
 
     @mcp.tool(
         name="get_weather_by_city_and_state",
