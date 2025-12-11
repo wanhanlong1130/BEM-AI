@@ -36,7 +36,7 @@ class ServerConfig(BaseModel):
 
     host: str
     port: int
-    transport: str
+    transport: Literal["std", "sse", "http"]
     url: str
 
 
