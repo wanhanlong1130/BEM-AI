@@ -1,4 +1,5 @@
 import logging
+import os
 
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
@@ -65,7 +66,7 @@ class GenericAgentExecutor(AgentExecutor):
             # logger.info(f"🔍 Processing item: is_complete={is_task_complete}, require_input={require_user_input}")
 
             if is_task_complete:
-                self.logger.info(f"🔍 Completing with content: {item['content']}")
+                self.logger.info(f"🔍 {os.getpid()}: Completing with content: {item['content']}")
                 if item["response_type"] == "data":
                     part = DataPart(data=item["content"])
                 else:

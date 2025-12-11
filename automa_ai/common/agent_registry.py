@@ -15,8 +15,14 @@ from a2a.types import AgentCard
 from automa_ai.common.agent_executor import GenericAgentExecutor
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.utils import wait_for_port
+from automa_ai.common.setup_logging import _init_child_logging
+
 
 logger = logging.getLogger(__name__)
+
+def _child_entrypoint(run_fn, logging_config):
+    _init_child_logging(logging_config)
+    run_fn()
 
 class A2AAgentServer:
     def __init__(self, agent_builder: Callable[[], BaseAgent], card: AgentCard, log_dir: str="./logs"):
@@ -59,9 +65,10 @@ class A2AAgentServer:
 
 
 class A2AServerManager:
-    def __init__(self):
+    def __init__(self, logging_config: dict | None = None):
         self.servers: List[A2AAgentServer] = []
         self.processes: Dict[str, Process] = {}
+        self.logging_config = logging_config
 
     def add_server(self, agent_server: A2AAgentServer) -> bool:
         """Add an agent configuration"""
@@ -76,7 +83,10 @@ class A2AServerManager:
             server_name = server.name
             logger.info(f"Booting agent: {server_name}")
             # Create and start process
-            process = Process(target=server.run)
+            process = Process(
+                target=_child_entrypoint,
+                args=(server.run, self.logging_config)
+            )
             process.start()
 
             try:

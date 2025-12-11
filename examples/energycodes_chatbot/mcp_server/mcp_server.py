@@ -3,7 +3,6 @@ import os
 
 from mcp.server import FastMCP
 
-from automa_ai.common.setup_logging import setup_file_logger
 
 logger = logging.getLogger(__name__)
 

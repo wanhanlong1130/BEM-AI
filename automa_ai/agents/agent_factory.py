@@ -152,7 +152,7 @@ class AgentFactory:
                 for server_name, config in self.mcp_configs.items()
             }
         logger.info(f"Successful log the MCP servers for agent: {self.card.name}...")
-        logger.info(f"Initializing a {self.agent_type} agent")
+        logger.info(f"Initializing a {self.agent_type.value} agent")
 
         if self.agent_type == GenericAgentType.ADK:
             return GenericADKAgent(

@@ -5,6 +5,8 @@ from typing import Any, Dict, Optional
 import fnmatch
 import logging.config
 
+import multiprocessing_logging
+
 
 LoggingConfigDict = Dict[str, Any]
 
@@ -64,6 +66,10 @@ def setup_file_logger(
 
     return logger
 
+def _init_child_logging(config: dict | None):
+    if config is not None:
+        logging.config.dictConfig(config)
+        multiprocessing_logging.install_mp_handler(logging.getLogger()) 
 
 def _add_file_handler(
     logger: logging.Logger,
@@ -92,6 +98,13 @@ def _add_file_handler(
         The created FileHandler instance (can be used to remove it later).
     """
     os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+
+    for handler in logger.handlers:
+        if (
+            isinstance(handler, logging.FileHandler)
+            and getattr(handler, "baseFilename", None) == os.path.abspath(log_file_path)
+        ):
+            return handler
 
     file_handler = logging.FileHandler(log_file_path, mode=mode, encoding="utf-8")
     file_handler.setLevel(level)
@@ -306,7 +319,12 @@ def setup_logging(
             created. Defaults to "logs".
         existing_config: An optional existing logging configuration
             dictionary to merge into before applying.
+
+    Returns:
+        dict: A logging configuration dictionary suitable for passing to
+              `logging.config.dictConfig`.
     """
-    print("Logging set")
     config = build_logging_config(log_dir=log_dir, existing_config=existing_config)
     logging.config.dictConfig(config)
+    multiprocessing_logging.install_mp_handler(logging.getLogger()) 
+    return config

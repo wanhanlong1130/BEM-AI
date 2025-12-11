@@ -1,5 +1,5 @@
 import logging
-from typing import AsyncIterable, Any
+from typing import AsyncIterable, Any, Dict, Optional
 
 from a2a.types import (
     SendStreamingMessageSuccessResponse,
@@ -25,6 +25,7 @@ class OrchestratorConfig(BaseModel):
     model_name: str
     instruction: str
     model_base_url: str | None = None
+    logging_config: Optional[Dict[str, Any]] = None
 
 class OrchestratorNetworkAgent(BaseAgent):
     """
