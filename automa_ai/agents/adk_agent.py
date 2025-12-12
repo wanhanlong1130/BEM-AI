@@ -13,12 +13,6 @@ from automa_ai.common.agent_runner import AgentRunner
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.types import ServerConfig
 
-logging.basicConfig(
-    filename="adk_agent.log",
-    filemode="w",  # Overwrite each run
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
 
 logger = logging.getLogger(__name__)
 

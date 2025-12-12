@@ -15,8 +15,7 @@ from automa_ai.metrics.collector import MetricsCollector
 from automa_ai.metrics.extractor import extract_metrics_from_chunk
 
 memory = MemorySaver()
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s | %(levelname)-8s | "
-                           "%(module)s:%(funcName)s:%(lineno)d - %(message)s")
+
 logger = logging.getLogger(__name__)
 
 class GenericLangGraphChatAgent(BaseAgent):
@@ -35,7 +34,6 @@ class GenericLangGraphChatAgent(BaseAgent):
         debug: bool = False
     ):
 
-        logger.info("Initializing a LangGraph react agent")
         # Remove all empty strings
         super().__init__(
             agent_name=agent_name,

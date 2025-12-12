@@ -4,9 +4,13 @@ from dataclasses import dataclass
 from multiprocessing import Process
 from typing import Dict, List
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+from automa_ai.common.setup_logging import _init_child_logging
 
+logger = logging.getLogger(__name__)
+
+def _child_entrypoint(serve_fn, logging_config, *serve_args):
+    _init_child_logging(logging_config)
+    serve_fn(*serve_args)
 
 @dataclass
 class MCPServerConfig:
@@ -23,9 +27,10 @@ class MCPServerConfig:
 class MCPServerManager:
     """Simple MCP Server Manager"""
 
-    def __init__(self):
+    def __init__(self, logging_config: dict | None = None):
         self.servers: Dict[str, Process] = {}
         self.configs: Dict[str, MCPServerConfig] = {}
+        self.logging_config = logging_config
 
     def add_server(self, config: MCPServerConfig) -> bool:
         """Add a server configuration"""
@@ -53,19 +58,15 @@ class MCPServerManager:
         if name == "a2a-agent-cards":
             # Default agent card mcp
             print("Process booting up the agent cards server")
-            process = Process(
-                target=config.serve,
-                args=(config.host, config.port, config.transport, config.agent_cards_dir),
-                daemon=True,
-                name=f"mcp-{name}",
-            )
+            serve_args = (config.host, config.port, config.transport, config.agent_cards_dir)
         else:
-            process = Process(
-                target=config.serve,
-                args=(config.host, config.port, config.transport),
-                daemon=True,
-                name=f"mcp-{name}",
-            )
+            serve_args = (config.host, config.port, config.transport)
+        process = Process(
+            target=_child_entrypoint,
+            args=(config.serve, self.logging_config, *serve_args),
+            daemon=True,
+            name=f"mcp-{name}",
+        )
 
         try:
             process.start()

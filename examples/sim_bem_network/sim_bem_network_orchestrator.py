@@ -22,7 +22,6 @@ from app_mcps import model_mcp, os_mcp
 from automa_ai.common.types import TaskList
 from automa_ai.network.agentic_network import MultiAgentNetwork
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Find the directory where this script is located

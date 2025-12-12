@@ -7,7 +7,6 @@ from statistics import mean
 from automa_ai.mcp_servers.agent_card_server import build_agent_card_embeddings, find_best_match
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 
 def load_test_cases(test_file: str) -> List[Dict]:

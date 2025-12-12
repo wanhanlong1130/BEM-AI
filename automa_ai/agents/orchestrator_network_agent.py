@@ -1,5 +1,5 @@
 import logging
-from typing import AsyncIterable, Any
+from typing import AsyncIterable, Any, Dict, Optional
 
 from a2a.types import (
     SendStreamingMessageSuccessResponse,
@@ -17,12 +17,7 @@ from automa_ai.common.response_parser import extract_and_parse_json
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.workflow import WorkflowGraph, WorkflowNode, Status
 
-logging.basicConfig(
-    filename="orchestrator_agent.log",
-    filemode="w",  # Overwrite each run
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+
 logger = logging.getLogger(__name__)
 
 class OrchestratorConfig(BaseModel):
@@ -30,6 +25,7 @@ class OrchestratorConfig(BaseModel):
     model_name: str
     instruction: str
     model_base_url: str | None = None
+    logging_config: Optional[Dict[str, Any]] = None
 
 class OrchestratorNetworkAgent(BaseAgent):
     """
@@ -170,7 +166,7 @@ class OrchestratorNetworkAgent(BaseAgent):
             # Resume workflow, used when the workflow nodes are updated.
             should_resume_workflow = False
             async for chunk in self.graph.run_workflow(start_node_id=start_node_id):
-                print(chunk)
+                logger.info(chunk)
                 if isinstance(chunk.root, SendStreamingMessageSuccessResponse):
                     # The graph node returned TaskStatusUpdateEvent
                     # Check if the node is complete and continue to the next node
