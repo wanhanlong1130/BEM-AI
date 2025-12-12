@@ -66,8 +66,9 @@ class GenericLangGraphReactAgent(BaseAgent):
             self.client = MultiServerMCPClient(
                 {
                     server_name: {
-                        "url": f"{self.mcp_servers[server_name].url}/sse",
-                        "transport": "sse",
+                        "url": f"{self.mcp_servers[server_name].url}/sse" if self.mcp_servers[
+                                                                                 server_name].transport == "sse" else f"{self.mcp_servers[server_name].url}/mcp",
+                        "transport": self.mcp_servers[server_name].transport,
                     }
                     for server_name in self.mcp_servers
                 }
