@@ -82,7 +82,7 @@ class TaskList(BaseModel):
     original_query: str | None = Field(
         description="The original user query for context."
     )
-    blackboard: ModelInfo | None = Field(description="EnergyPlus or OpenStudio modeling task information")
+    blackboard: ModelInfo | None = Field(description="Task information")
 
     tasks: list[PlannerTask] = Field(
         description="A list of tasks to be executed sequentially."

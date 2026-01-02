@@ -1,5 +1,6 @@
 import logging
-from typing import Dict, AsyncIterable, Any
+from typing import Dict, AsyncIterable, Any, List, Callable
+from asyncio import Queue
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessageChunk, ToolMessage
@@ -8,6 +9,8 @@ from langgraph.checkpoint.memory import MemorySaver
 from langchain.agents import create_agent
 from pydantic import BaseModel
 
+from automa_ai.agents.remote_agent import SubAgentSpec, make_subagent_tool, build_subagent_delegation_instruction, \
+    StreamEvent
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.retriever import BaseRetriever
 from automa_ai.common.types import ServerConfig
@@ -31,6 +34,7 @@ class GenericLangGraphChatAgent(BaseAgent):
         response_format: type[BaseModel] | None,
         mcp_servers: Dict[str, ServerConfig] | None = None,
         retriever: BaseRetriever | None = None,
+        subagents: List[SubAgentSpec] | None = None,
         enable_metrics: bool = False,
         debug: bool = False
     ):
@@ -53,9 +57,12 @@ class GenericLangGraphChatAgent(BaseAgent):
         self.debug = debug
         if enable_metrics:
             self.metrics = MetricsCollector()
+        self.subagents = subagents
 
-    async def init_graph(self):
-        """Load the agent graph"""
+    async def init_graph(self, emitter: Callable[[StreamEvent], None]):
+        """Load the agent graph
+        emitter: agent internal event queue for streaming, a separate streaming channel from langchain's streaming.
+        """
         logger.info(f"Initializing {self.agent_name} metadata")
         if self.mcp_servers:
             # Loading mcp server clients.
@@ -79,6 +86,15 @@ class GenericLangGraphChatAgent(BaseAgent):
                     print(self.agent_name, f"Loaded tools {tool.name}")
                 logger.info(f"Loaded tools {tool.name}")
 
+        if self.subagents:
+            for subagent in self.subagents:
+                tools.append(make_subagent_tool(subagent, emitter))
+            # build up the instruction
+            self.instructions = (
+                f"{self.instructions}\n\n"
+                f"{build_subagent_delegation_instruction(self.subagents)}"
+            )
+
         self.graph = create_agent(
             self.model,
             checkpointer=memory,
@@ -87,14 +103,37 @@ class GenericLangGraphChatAgent(BaseAgent):
             tools=tools
         )
 
-    async def invoke(self, query, sessionId):
-        config = {"configurable": {"thread_id": sessionId}}
+    async def invoke(self, query, session_id: str) -> Any:
+        config = {"configurable": {"thread_id": session_id}}
+        # queue for tool/subagent streaming
+        subagent_event_queue: Queue[StreamEvent] = Queue()
+        def emit_subagent_event(e: StreamEvent):
+            """
+            Called by tools / subagents to stream intermediate output.
+            Must be non-blocking.
+            """
+            subagent_event_queue.put_nowait(e)
+
+        emitter = emit_subagent_event
+
         if not self.graph:
-            await self.init_graph()
+            await self.init_graph(emitter)
         response = await self.graph.ainvoke({"messages": [("user", query)]}, config)
         return response
 
     async def stream(self, query, session_id, task_id) -> AsyncIterable[dict[str, Any]]:
+        # use to track the tool call steps
+        active_tool_calls = 0
+        # queue for tool/subagent streaming
+        subagent_event_queue: Queue[StreamEvent] = Queue()
+        def emit_subagent_event(e: StreamEvent):
+            """
+            Called by tools / subagents to stream intermediate output.
+            Must be non-blocking.
+            """
+            subagent_event_queue.put_nowait(e)
+        emitter = emit_subagent_event
+
         # If selected to track metrics
         if self.metrics:
             if self.metrics.current_query_id and self.metrics.current_query_id != query:
@@ -127,10 +166,29 @@ class GenericLangGraphChatAgent(BaseAgent):
             f"Running planner agent stream for session {session_id} {task_id} with input {query}"
         )
         if not self.graph:
-            await self.init_graph()
+            await self.init_graph(emitter)
         # seen_messages = set()
         # Collect all streaming messages first
+        # At the start of the stream
+        stream_buffer = []
         async for chunk in self.graph.astream(inputs, config, stream_mode="messages"):
+            # surface local tool/subagent streaming
+            while not subagent_event_queue.empty():
+                event = subagent_event_queue.get_nowait()
+                # Build informative content
+                content_str = f"\n\n[{event.source}] "
+
+                if event.metadata and event.metadata.get("final"):
+                    content_str += "(final) "
+                content_str += event.content
+
+                yield {
+                    "response_type": "text",
+                    "is_task_complete": False,
+                    "require_user_input": False,
+                    "content": content_str,
+                }
+
             if self.debug:
                 print("Getting the chunk", chunk)
             ck, meta = chunk
@@ -143,6 +201,14 @@ class GenericLangGraphChatAgent(BaseAgent):
                             session_id=session_id,
                             query_id=self.metrics.current_query_id
                         ))
+
+                # is task completed?
+                is_last_model_step = (
+                        ck.chunk_position
+                        and ck.chunk_position == "last"
+                        and active_tool_calls == 0
+                )
+
                 if ck.content:
                     content = ck.content
                     response_metadata = ck.response_metadata
@@ -157,15 +223,25 @@ class GenericLangGraphChatAgent(BaseAgent):
                             elif content["type"] == "tool_use":
                                 # seems unique to claude - temporary block tool call info first.
                                 content = "-"
-                    # content = content.strip()
 
-                    yield {
-                        "response_type": "text",
-                        "is_task_complete": False,
-                        "require_user_input": False,
-                        "content": content,
-                    }
+                    stream_buffer.append(content)
+                    if is_last_model_step:
+                        # in this case, the response is completed, so we return the final results
+                        yield {
+                            "response_type": "text",
+                            "is_task_complete": True,
+                            "require_user_input": False,
+                            "content": "".join(stream_buffer).strip(),
+                        }
+                    else:
+                        yield {
+                            "response_type": "text",
+                            "is_task_complete": False,
+                            "require_user_input": False,
+                            "content": content,
+                        }
                 elif ck.tool_calls:
+                    active_tool_calls += len(ck.tool_calls)
                     tool_call_str = ""
                     for tool_call in ck.tool_calls:
                         tool_call_str += f"Making tool calls: **{tool_call.get('name')}**:\n\n"
@@ -177,9 +253,21 @@ class GenericLangGraphChatAgent(BaseAgent):
                         "require_user_input": False,
                         "content": tool_call_str,
                     }
+                else:
+                    if is_last_model_step:
+                        print(f"last stream: {'\n'.join(stream_buffer).strip(),}")
+                        # in this case, the response is completed, so we return the final results
+                        yield {
+                            "response_type": "text",
+                            "is_task_complete": True,
+                            "require_user_input": False,
+                            "content": "".join(stream_buffer).strip(),
+                        }
             elif isinstance(ck, ToolMessage):
+                active_tool_calls -= 1
                 if ck.content:
-                    content = f"**Tool {ck.name} responded**: {ck.content}\n\n"
+                    stream_buffer.append(ck.content)
+                    content = f"\n\n **Tool {ck.name} responded**: {ck.content}\n\n"
                     yield {
                         "response_type": "text",
                         "is_task_complete": False,

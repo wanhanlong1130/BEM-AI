@@ -22,7 +22,6 @@ from automa_ai.agents import GenericLLM, GenericAgentType
 from automa_ai.agents.agent_factory import AgentFactory
 from automa_ai.common.agent_registry import A2AAgentServer
 from automa_ai.common.mcp_registry import MCPServerConfig
-from automa_ai.network.task_local_workflow import TaskLocalServiceOrchestrator
 from automa_ai.common.types import TaskList
 
 logging.basicConfig(level=logging.INFO)
