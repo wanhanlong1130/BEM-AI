@@ -1,14 +1,17 @@
 import logging
 import os
 import sys
+from typing import List
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.utilities.logging import get_logger
 
+from examples.energycodes_chatbot.helpdesk_retriever import EnergyCodesHelpdeskRetriever
+
 logger = get_logger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
-MCP_NAME = "chat_mcp"
+MCP_NAME = "knowledge_base_mcp"
 
 # counties_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'resources', 'counties.dat')
 
@@ -31,21 +34,24 @@ def serve(host, port, transport):
     # Redirect stdout and stderr to log file — like `> logfile 2>&1`
     sys.stdout = open(log_file, "a", buffering=1)
     sys.stderr = sys.stdout
+    retriever = EnergyCodesHelpdeskRetriever(k=3)
 
     @mcp.tool(
-        name="get_weather_by_city_and_state",
-        description="Get current weather condition by city and state"
+        name="get_similar_past_tickets",
+        description="Retrieve past user tickets that contains question and answers."
     )
-    def get_weather_by_city(city: str, state: str) -> str:
+    def get_similar_past_tickets(user_query: str) -> str:
         """
         Get the current weather condition by city and state
-        :param city: name of the city, For example: "Boulder"
-        :param state: name of the State, For example: "Colorado"
-        :return: weather condition: Sunny | Windy | Cloudy
+        :param user_query: user inputs, For example: "How do I set wall orientation in COMcheck?"
+        :return: str: A formatted string
         """
-        if city.lower() == "tampa" and state.lower() == "florida":
-            return "Sunny"
-        return "Cloudy"
+        print(user_query)
+        retrieved = retriever.similarity_search_by_vector(user_query)
+        formatted = "You are given the following context from the knowledge base: \n\n"
+        for r in retrieved:
+            formatted += f"    question: {r["question"]}, answer: {r["answer"]}, score: {r["score"]} \n"
+        return formatted
 
     logger.info(f"MCP Server at {host}:{port} and transport {transport}")
     mcp.run(transport=transport)
