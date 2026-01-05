@@ -2,7 +2,7 @@
 import logging
 from dataclasses import dataclass
 from multiprocessing import Process
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -16,7 +16,7 @@ class MCPServerConfig:
     host: str
     port: int
     serve: callable
-    transport: str = "sse"
+    transport: Literal["std", "sse", "http"]
     agent_cards_dir: str = "/automa_ai"
 
 
