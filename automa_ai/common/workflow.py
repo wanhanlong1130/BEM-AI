@@ -110,7 +110,7 @@ class WorkflowNode:
             response_stream = a2a_client.send_message_streaming(request)
             async for chunk in response_stream:
                 # print(f"this is error chunk: {chunk}")
-                logger.error(f"chunk returned {chunk}")
+                logger.info(f"chunk returned {chunk}")
                 # Save the artifact as a result of the node
                 if isinstance(chunk.root, SendStreamingMessageResponse) and isinstance(
                     chunk.root.result, TaskArtifactUpdateEvent

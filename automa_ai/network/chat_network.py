@@ -44,8 +44,7 @@ class ChatServiceOrchestrator(ServiceOrchestrator):
                     if chunk.get("is_task_complete"):
                         break
                 else:
-                    print(f"⚠️ Unexpected chunk type: {type(chunk)}")
-                    print(chunk)
+                    logger.warning(f"⚠️ Unexpected chunk type: {type(chunk)} - {chunk}")
                     results.append(chunk)
         finally:
             print("🛑 Tearing down agentic network")

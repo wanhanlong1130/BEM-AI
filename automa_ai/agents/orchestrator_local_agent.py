@@ -17,12 +17,7 @@ from automa_ai.common.response_parser import extract_and_parse_json
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.workflow import WorkflowGraph, WorkflowNode, Status
 
-logging.basicConfig(
-    filename="orchestrator_agent.log",
-    filemode="w",  # Overwrite each run
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+
 logger = logging.getLogger(__name__)
 
 class OrchestratorLocalConfig(BaseModel):

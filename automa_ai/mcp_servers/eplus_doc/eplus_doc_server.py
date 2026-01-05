@@ -18,8 +18,7 @@ from mcp.server import FastMCP
 from pydantic import BaseModel, Field
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("energyplus-docs-fastmcp")
+logger = logging.getLogger(__name__)
 
 EPLUS_DOC_URL = "https://bigladdersoftware.com/epx/docs/25-1/input-output-reference/"
 

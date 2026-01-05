@@ -6,16 +6,9 @@ from contextlib import asynccontextmanager
 import click
 from mcp import ClientSession, StdioServerParameters, stdio_client
 from mcp.client.sse import sse_client
-from mcp.server.fastmcp.utilities.logging import get_logger
 from mcp.types import CallToolResult, ReadResourceResult
 
-logging.basicConfig(
-    filename="mcp_client.log",
-    filemode="w",  # Overwrite each run
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager

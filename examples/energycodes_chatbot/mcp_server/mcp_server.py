@@ -1,15 +1,11 @@
 import logging
 import os
 import sys
-from typing import List
 
 from mcp.server import FastMCP
-from mcp.server.fastmcp.utilities.logging import get_logger
 
 from examples.energycodes_chatbot.helpdesk_retriever import EnergyCodesHelpdeskRetriever
-
-logger = get_logger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 
 MCP_NAME = "knowledge_base_mcp"
 
