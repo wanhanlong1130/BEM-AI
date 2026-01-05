@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # Find the directory where this script is located
 # Pointing to automa_ai
 base_dir = Path(__file__).resolve().parent
-env_path = base_dir / '.env'
+env_path = base_dir / ".env"
 load_dotenv(dotenv_path=env_path)
 
 ########################################################################################
@@ -235,29 +235,32 @@ Based on the above information, summarize the work that has performed in this ta
 #########################################################################################
 ###### MCP ######################################
 oss_schema_mcp_config = MCPServerConfig(
-            name="oss_schema_mcp",
-            host="localhost",
-            port=10110,
-            serve=os_mcp.serve,
-            transport="sse"
-    )
+    name="oss_schema_mcp",
+    host="localhost",
+    port=10110,
+    serve=os_mcp.serve,
+    transport="sse",
+)
 
 oss_model_mcp_config = MCPServerConfig(
     name="oss_model_mcp",
     host="localhost",
     port=10118,
     serve=model_mcp.serve,
-    transport="sse"
+    transport="sse",
 )
 
 #########################################################################################
 ###### Define a planner agent that plans the tasks ######################################
 planner_model_name = os.getenv("PLANNER_MODEL_NAME")
 planner_model_base_url = os.getenv("PLANNER_MODEL_BASE_URL")
+
+
 class ResponseFormat(BaseModel):
     status: Literal["input_required", "completed", "error"] = "input_required"
     question: str = Field(description="Input needed from the user to generate the plan")
     content: TaskList = Field(description="List of tasks when the plan is generated")
+
 
 # Compute full path to the agent card file
 agent_card_path = base_dir / "agent_cards/planner_agent.json"
@@ -274,7 +277,7 @@ planner = AgentFactory(
     response_format=ResponseFormat,
     model_base_url=planner_model_base_url,
     enable_metrics=True,
-    debug = True
+    debug=True,
 )
 
 #########################################################################################
@@ -295,7 +298,7 @@ env_modeler = AgentFactory(
     chat_model=GenericLLM.OLLAMA,
     mcp_configs={"oss_schema_mcp": oss_schema_mcp_config},
     enable_metrics=True,
-    debug = True
+    debug=True,
 )
 
 # Load model template agent.
@@ -312,7 +315,7 @@ template_modeler = AgentFactory(
     chat_model=GenericLLM.OLLAMA,
     mcp_configs={"oss_model_mcp": oss_model_mcp_config},
     enable_metrics=True,
-    debug = True
+    debug=True,
 )
 
 # Load lighting model agent
@@ -329,7 +332,7 @@ lighting_modeler = AgentFactory(
     chat_model=GenericLLM.OLLAMA,
     mcp_configs={"oss_schema_mcp": oss_schema_mcp_config},
     enable_metrics=True,
-    debug = True
+    debug=True,
 )
 
 # Load simulation model agent
@@ -346,7 +349,7 @@ simulation_agent = AgentFactory(
     chat_model=GenericLLM.OLLAMA,
     mcp_configs={"oss_schema_mcp": oss_schema_mcp_config},
     enable_metrics=True,
-    debug = True
+    debug=True,
 )
 
 # EnergyPlus output agent
@@ -363,7 +366,7 @@ output_agent = AgentFactory(
     chat_model=GenericLLM.OLLAMA,
     mcp_configs={"oss_schema_mcp": oss_schema_mcp_config},
     enable_metrics=True,
-    debug = True
+    debug=True,
 )
 
 # Orchestrator agent
@@ -380,7 +383,7 @@ orchestrator_agent = AgentFactory(
     agent_type=GenericAgentType.ORCHESTRATOR,
     chat_model=GenericLLM.OLLAMA,
     enable_metrics=True,
-    debug = True
+    debug=True,
 )
 
 ###Sample Questions
@@ -391,7 +394,7 @@ orchestrator_agent = AgentFactory(
 
 
 async def main():
-    automa_network = MultiAgentNetwork(agent_cards_dir = base_dir / "agent_cards")
+    automa_network = MultiAgentNetwork(agent_cards_dir=base_dir / "agent_cards")
     automa_network.add_mcp_server(oss_schema_mcp_config)
     automa_network.add_mcp_server(oss_model_mcp_config)
 

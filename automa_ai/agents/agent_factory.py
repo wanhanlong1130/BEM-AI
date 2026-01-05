@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Dict
+from typing import Dict, List
 
 from a2a.types import AgentCard
 from google.adk.models.lite_llm import LiteLlm
@@ -16,6 +16,7 @@ from automa_ai.agents.adk_agent import GenericADKAgent
 from automa_ai.agents.langgraph_chatagent import GenericLangGraphChatAgent
 from automa_ai.agents.orchestrator_network_agent import OrchestratorNetworkAgent
 from automa_ai.agents.react_langgraph_agent import GenericLangGraphReactAgent
+from automa_ai.agents.remote_agent import SubAgentSpec
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.mcp_registry import MCPServerConfig
 from automa_ai.common.retriever import RetrieverConfig, ChromaRetriever
@@ -126,6 +127,7 @@ class AgentFactory:
         response_format: type[BaseModel] | None = None,
         mcp_configs: Dict[str, MCPServerConfig] | None = None,
         retriever_config: RetrieverConfig | None = None,
+        subagent_config: List[SubAgentSpec] | None = None,
         model_base_url: str | None = None,
         api_key: str | None = None,
         api_version: str | None = None,
@@ -140,6 +142,7 @@ class AgentFactory:
         self.response_format = response_format
         self.mcp_configs = mcp_configs
         self.retriever_config = retriever_config
+        self.subagent_config = subagent_config
         self.model_base_url = model_base_url
         self.api_key = api_key
         self.api_version = api_version
@@ -179,6 +182,7 @@ class AgentFactory:
                 chat_model=chat_model,
                 mcp_servers=mcp_servers,
                 retriever=resolve_retriever(self.retriever_config) if self.retriever_config else None,
+                subagents=self.subagent_config if self.subagent_config else None,
                 enable_metrics = self.enable_metrics,
                 debug=self.debug
             )

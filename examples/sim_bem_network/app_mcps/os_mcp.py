@@ -13,7 +13,7 @@ from mcp.server import FastMCP
 from openstudio import BoundingBox, Point3d, Transformation
 from openstudio.openstudiomodelgeometry import DaylightingControl
 
-env_path = Path(__file__).resolve().parent.parent / '.env'
+env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 
@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 MCP_NAME = "openstudio_mcp"
 
 OPENSTUDIOCLI = os.getenv("OPENSTUDIO_APPLICATION_PATH")
+
 
 def serve(host, port, transport):
     """Initialize and runs the agent cards mcp_servers server.
@@ -40,12 +41,14 @@ def serve(host, port, transport):
         name="modify_window_to_wall_ratio",
         description="Load an openstudio energy model, modify envelope window to wall ratio, save the modified model and return its local directory.",
     )
-    def modify_window_to_wall_ratio(os_model_path: str, fraction_reduction: float) -> str:
+    def modify_window_to_wall_ratio(
+        os_model_path: str, fraction_reduction: float
+    ) -> str:
         """
-            Load an Openstudio model at os_model_path and reduce envelope window to wall ratio by a percent_reduction
-            :param os_model_path: a valid path to an openstudio model (.osm):
-            :param fraction_reduction: float, must be within 0 - 1
-            :return: string, the path to a copied model that has the modified content.
+        Load an Openstudio model at os_model_path and reduce envelope window to wall ratio by a percent_reduction
+        :param os_model_path: a valid path to an openstudio model (.osm):
+        :param fraction_reduction: float, must be within 0 - 1
+        :return: string, the path to a copied model that has the modified content.
         """
         translator = openstudio.openstudioosversion.VersionTranslator()
         model = translator.loadModel(os_model_path).get()
@@ -70,14 +73,14 @@ def serve(host, port, transport):
 
                 subsurface.setVertices(new_vertices)
         # Modify the file path to save the modified model
-        new_path = os_model_path.replace('.osm', '_copy.osm')
+        new_path = os_model_path.replace(".osm", "_copy.osm")
         # Save the model_copy to the new path
         model_copy.save(new_path, True)  # Save with overwriting permission
         return new_path
 
     @mcp.tool(
         name="add_daylight_sensor",
-        description="Add a daylighting sensor to spaces and save the model to an output directory"
+        description="Add a daylighting sensor to spaces and save the model to an output directory",
     )
     def add_daylight_sensors_test(os_model_path: str) -> dict[str, str]:
         """
@@ -137,19 +140,25 @@ def serve(host, port, transport):
                     face_transform = Transformation.alignFace(floor.vertices())
                     face_vertices = list(face_transform * floor.vertices())
                     face_point_on_plane = face_transform * point_on_plane
-                    if openstudio.pointInPolygon(face_point_on_plane, face_vertices[::-1], 0.01):
+                    if openstudio.pointInPolygon(
+                        face_point_on_plane, face_vertices[::-1], 0.01
+                    ):
                         on_surface = True
 
                 if on_surface:
                     daylight_sensor.setPosition(new_point)
                     daylight_sensor.setPhiRotationAroundZAxis(0.0)
                     daylight_sensor.setIlluminanceSetpoint(430.0)
-                    daylight_sensor.setLightingControlType('Continuous')
-                    daylight_sensor.setMinimumInputPowerFractionforContinuousDimmingControl(0.3)
-                    daylight_sensor.setMinimumLightOutputFractionforContinuousDimmingControl(0.2)
+                    daylight_sensor.setLightingControlType("Continuous")
+                    daylight_sensor.setMinimumInputPowerFractionforContinuousDimmingControl(
+                        0.3
+                    )
+                    daylight_sensor.setMinimumLightOutputFractionforContinuousDimmingControl(
+                        0.2
+                    )
                     daylight_sensor.setNumberofSteppedControlSteps(1)
         # Modify the file path to save the modified model
-        new_path = os_model_path.replace('.osm', '_copy.osm')
+        new_path = os_model_path.replace(".osm", "_copy.osm")
         # Save the model_copy to the new path
         model_copy.save(new_path, True)
         return new_path
@@ -334,15 +343,25 @@ def serve(host, port, transport):
         if openstudio.exists(sql_path):
             sql_file = openstudio.SqlFile(sql_path)
 
-            total_site_energy_kbtu = round(openstudio.convert(sql_file.totalSiteEnergy().get(), 'GJ', 'kBtu').get(), 2)
-            floor_area_ft2 = round(openstudio.convert(model.getBuilding().floorArea(), 'm^2', 'ft^2').get(), 2)
+            total_site_energy_kbtu = round(
+                openstudio.convert(
+                    sql_file.totalSiteEnergy().get(), "GJ", "kBtu"
+                ).get(),
+                2,
+            )
+            floor_area_ft2 = round(
+                openstudio.convert(
+                    model.getBuilding().floorArea(), "m^2", "ft^2"
+                ).get(),
+                2,
+            )
             site_eui_kbtu_per_ft2 = round(total_site_energy_kbtu / floor_area_ft2, 2)
 
             return {
                 "status": "success",
                 "site_eui_kbtu_per_ft2": site_eui_kbtu_per_ft2,
                 "floor_area_ft2": floor_area_ft2,
-                "total_site_energy_kbtu": total_site_energy_kbtu
+                "total_site_energy_kbtu": total_site_energy_kbtu,
             }
         else:
             return {
@@ -350,7 +369,7 @@ def serve(host, port, transport):
                 "message": "Cannot find the simulated results.",
                 "site_eui_kbtu_per_ft2": 0.0,
                 "floor_area_ft2": 0.0,
-                "total_site_energy_kbtu": 0.0
+                "total_site_energy_kbtu": 0.0,
             }
 
     logger.info(f"OpenStudio MCP Server at {host}:{port} and transport {transport}")

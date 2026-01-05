@@ -17,12 +17,18 @@ CHAT_COT = """
 You are AUTOMA-AI, a dynamic multi-agent network system built on Google's A2A and Anthropic's MCP protocols, combining the power of LangChain, Google GenAI, and modern agent orchestration for engineering task orchestration.
 Your task is to provide helpful information for users to use AUTOMA-AI.
 
-Always use the CHAIN-OF-THOUGHT PROCESS before answering user questions.
+## QUESTION FORMAT
+You question should follow the example format below:
+{
+    "status": "input_required",
+    "question": {{add your question}}
+}
 
+Always use the CHAIN-OF-THOUGHT PROCESS before answering user questions.
 CHAIN-OF-THOUGHT PROCESS:
 Before each response, reason through:
 1. What information does the user want to know? [Understand user question]
-2. What information do I already have to answer user's question? [List all known information]
+2. Figure out if the user wants to know automa-ai in general or details in coding? [Understand user request]
 3. What is the next unknown information? [Identify gap]
 4. If I dont have the information, can I find them in the SAMPLE CODE? [Try to search for information]
 4. If I cannot find the unknown information, how should i naturally ask for this information? [Formulate question]
@@ -160,7 +166,7 @@ openai_model = os.environ.get("OPEN_AI_MODEL_NAME")
 openai_url = os.environ.get("OPENAI_HOST_URL")
 
 # Initialize chatbot agent
-chatbot = AgentFactory(
+openai_chatbot = AgentFactory(
     card=public_agent_card,
     instructions=CHAT_COT,
     model_name=openai_model,
@@ -172,9 +178,18 @@ chatbot = AgentFactory(
     enable_metrics=True,
     debug=True,
 )
+google_chatbot = AgentFactory(
+    card=public_agent_card,
+    instructions=CHAT_COT,
+    agent_type=GenericAgentType.LANGGRAPHCHAT,
+    chat_model=GenericLLM.GEMINI,
+    model_name=chat_bot_model_name,
+    enable_metrics=True,
+    debug=True,
+)
 
 # Wrap automa-chatbot agent in A2A agent server
-chatbot_a2a = A2AAgentServer(chatbot, public_agent_card)
+chatbot_a2a = A2AAgentServer(google_chatbot, public_agent_card)
 # Initialize A2A server manager
 server_manager = A2AServerManager()
 # Add server

@@ -15,6 +15,7 @@ MCP_NAME = "model_mcp"
 
 # counties_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'resources', 'counties.dat')
 
+
 class BuildingType(str, Enum):
     MEDIUM_OFFICE = "MediumOffice"
 
@@ -23,9 +24,11 @@ class StandardType(str, Enum):
     ASHRAE_90_1_2019 = "90.1-2019"
     ASHRAE_90_1_2016 = "90.1-2016"
 
+
 class ClimateZone(str, Enum):
     CLIMATEZONE2A = "ASHRAE169-2013-2A"
     CLIMATEZONE5A = "ASHRAE169-2013-5A"
+
 
 def serve(host, port, transport):
     """Initialize and runs the agent cards mcp_servers server.
@@ -42,7 +45,7 @@ def serve(host, port, transport):
     
     @mcp.tool(
         name="get_climate_by_location",
-        description="Get the climate zone by city and state"
+        description="Get the climate zone by city and state",
     )
     def get_climate_by_location(city: str, state: str) -> str:
         """
@@ -55,13 +58,16 @@ def serve(host, port, transport):
             return ClimateZone.CLIMATEZONE2A.value
         return ClimateZone.CLIMATEZONE5A.value
 
-
     @mcp.tool(
         name="load_openstudio_model",
-        description="Load and copy OpenStudio (.osm) building energy models based on building type, standard type, and climate zone"
+        description="Load and copy OpenStudio (.osm) building energy models based on building type, standard type, and climate zone",
     )
-    def load_openstudio_model(building_type: 'BuildingType', standard_type: 'StandardType',
-                                   climate_zone: 'ClimateZone', save_dir: str) -> Union[str, None]:
+    def load_openstudio_model(
+        building_type: "BuildingType",
+        standard_type: "StandardType",
+        climate_zone: "ClimateZone",
+        save_dir: str,
+    ) -> Union[str, None]:
         """
         Load an openstudio model based on building type, standard type and climate zone
 
@@ -73,7 +79,9 @@ def serve(host, port, transport):
         """
         try:
             # Create the model filename
-            model_name = f"{building_type.value}-{standard_type.value}-{climate_zone.value}.osm"
+            model_name = (
+                f"{building_type.value}-{standard_type.value}-{climate_zone.value}.osm"
+            )
 
             # Get the directory where this script is located
             script_dir = Path(__file__).parent
