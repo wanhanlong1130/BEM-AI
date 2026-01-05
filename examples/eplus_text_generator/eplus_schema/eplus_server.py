@@ -1,16 +1,16 @@
 import os
 import re
 from typing import List, Tuple, Dict, Optional
+import logging
 
 import chromadb
 import yaml
 from chromadb.utils import embedding_functions
 from mcp.server import FastMCP
-from mcp.server.fastmcp.utilities.logging import get_logger
 
 from automa_ai.common.chunk import chunk_idd_objects
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 COMMONLY_USED_EPLUS_OBJECTS = [
             "Building", "Zone", "Space", "BuildingSurface:Detailed", "Window", "Door", "Construction",

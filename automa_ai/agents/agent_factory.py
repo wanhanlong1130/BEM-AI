@@ -22,7 +22,7 @@ from automa_ai.common.mcp_registry import MCPServerConfig
 from automa_ai.common.retriever import RetrieverConfig, ChromaRetriever
 from automa_ai.common.utils import map_mcp_config_to_server_config
 
-logging.basicConfig(level=logging.INFO)
+
 logger = logging.getLogger(__name__)
 
 def resolve_chat_model(backend: GenericLLM, model_name: str, agent_type: GenericAgentType, base_url: str | None = None, api_key: str | None = None, api_version: str | None = None):
@@ -163,6 +163,7 @@ class AgentFactory:
                 for server_name, config in self.mcp_configs.items()
             }
         logger.info(f"Successful log the MCP servers for agent: {self.card.name}...")
+        logger.info(f"Initializing a {self.agent_type.value} agent")
 
         if self.agent_type == GenericAgentType.ADK:
             return GenericADKAgent(

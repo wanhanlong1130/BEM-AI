@@ -2,25 +2,18 @@
 import json
 import logging
 import os
-import sys
 from pathlib import Path
 
 import chromadb
 from chromadb.utils import embedding_functions
 from mcp.server import FastMCP
-from mcp.server.fastmcp.utilities.logging import get_logger
+
 
 # BASE_DIR = Path(__file__).resolve().parent.parent  # goes from automa_ai/mcp_servers/ -> automa_ai/
 # AGENT_CARDS_DIR = BASE_DIR / "agent_cards"
 MODEL = "ollama_chat/llama3.1:8b"
 
-logging.basicConfig(
-    filename="mcp_server.log",
-    filemode="w",  # Overwrite each run
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 MCP_NAME = "agent_card_mcp"
 
@@ -125,8 +118,8 @@ def find_best_match(query: str, persist_dir: str = "./chroma_store") -> dict | N
     best_metadata = results["metadatas"][0][0]
     best_distance = results["distances"][0][0]
 
-    print(f"Query text: {query}")
-    print(f"Best match: {best_doc}")
+    logger.info(f"Query text: {query}")
+    logger.info(f"Best match: {best_doc}")
 
     logger.info(f"Best match: {best_uri} (distance={best_distance:.4f})")
     return {
@@ -163,13 +156,6 @@ def serve(host, port, transport, agent_cards_dir: str):
     """
     logger.info("Starting Agent Cards MCP Server")
     mcp = FastMCP("agent-cards", host=host, port=port)
-
-    log_file = os.path.join("./logs", f"{MCP_NAME}_server_{port}.log")
-    os.makedirs("./logs", exist_ok=True)
-
-    # Redirect stdout and stderr to log file — like `> logfile 2>&1`
-    sys.stdout = open(log_file, "a", buffering=1)
-    sys.stderr = sys.stdout
 
     build_agent_card_embeddings(agent_cards_dir)
 

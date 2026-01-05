@@ -16,7 +16,6 @@ from automa_ai.common.mcp_registry import MCPServerConfig
 from automa_ai.common.types import PlannerTask
 from automa_ai.network.chat_network import ChatServiceOrchestrator
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 system_prompt = """
