@@ -41,8 +41,8 @@ async def send_message_async(user_message: str, session_id: str):
 
 
 def main():
-    st.set_page_config(page_title="Automa AI Chat", page_icon="💬", layout="centered")
-    st.title("💬 Automa AI Chat Interface")
+    st.set_page_config(page_title="Energy Codes AI Chat", page_icon="💬", layout="centered")
+    st.title("💬 Energy Codes AI Chat Interface")
 
     # Initialize session ID
     session_id = get_session_id()
