@@ -246,11 +246,12 @@ class GenericLangGraphChatAgent(BaseAgent):
                         stream_buffer.append(content)
                         if is_last_model_step:
                             # in this case, the response is completed, so we return the final results
+                            content = "".join(str(item) for item in stream_buffer).strip()
                             yield {
                                 "response_type": "text",
                                 "is_task_complete": True,
                                 "require_user_input": False,
-                                "content": "".join(stream_buffer).strip(),
+                                "content": content,
                             }
                         else:
                             yield {
@@ -275,11 +276,12 @@ class GenericLangGraphChatAgent(BaseAgent):
                     else:
                         if is_last_model_step:
                             # in this case, the response is completed, so we return the final results
+                            content = "".join(str(item) for item in stream_buffer).strip()
                             yield {
                                 "response_type": "text",
                                 "is_task_complete": True,
                                 "require_user_input": False,
-                                "content": "".join(stream_buffer).strip(),
+                                "content": content,
                             }
                 elif isinstance(ck, ToolMessage):
                     active_tool_calls -= 1
