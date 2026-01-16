@@ -21,7 +21,7 @@ from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.mcp_registry import MCPServerConfig
 from automa_ai.common.retriever import RetrieverConfig, ChromaRetriever
 from automa_ai.common.utils import map_mcp_config_to_server_config
-
+from automa_ai.memory.manager import DefaultMemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +128,7 @@ class AgentFactory:
         mcp_configs: Dict[str, MCPServerConfig] | None = None,
         retriever_config: RetrieverConfig | None = None,
         subagent_config: List[SubAgentSpec] | None = None,
+        memory_config: Dict | None = None,
         model_base_url: str | None = None,
         api_key: str | None = None,
         api_version: str | None = None,
@@ -143,6 +144,7 @@ class AgentFactory:
         self.mcp_configs = mcp_configs
         self.retriever_config = retriever_config
         self.subagent_config = subagent_config
+        self.memory_config = memory_config
         self.model_base_url = model_base_url
         self.api_key = api_key
         self.api_version = api_version
@@ -165,6 +167,11 @@ class AgentFactory:
         logger.info(f"Successful log the MCP servers for agent: {self.card.name}...")
         logger.info(f"Initializing a {self.agent_type.value} agent")
 
+        # Resolve memories
+        memory_manager = None
+        if self.memory_config:
+            memory_manager = DefaultMemoryManager.from_config(self.memory_config)
+
         if self.agent_type == GenericAgentType.ADK:
             return GenericADKAgent(
                 agent_name=self.card.name,
@@ -183,6 +190,7 @@ class AgentFactory:
                 mcp_servers=mcp_servers,
                 retriever=resolve_retriever(self.retriever_config) if self.retriever_config else None,
                 subagents=self.subagent_config if self.subagent_config else None,
+                memory_manager=memory_manager,
                 enable_metrics = self.enable_metrics,
                 debug=self.debug
             )

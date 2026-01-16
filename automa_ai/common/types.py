@@ -36,7 +36,7 @@ class ServerConfig(BaseModel):
 
     host: str
     port: int
-    transport: Literal["std", "sse", "http"]
+    transport: Literal["stdio", "sse", "streamable-http"]
     url: str
 
 
