@@ -398,6 +398,18 @@ class TestComplexScenarios:
         assert msg.content == "I'll create that for you:  There you go!"
         assert acc.get_artifact_text() == "const x = 42;"
 
+    def test_add_chunk_failed_case(self):
+        """Test a realistic streaming pattern with small chunks."""
+        acc = AIMessageAccumulator()
+
+        # Simulate realistic small chunks
+        full_text = f"Of course, I can help with that. To get started, please provide me with a description of your project and let"
+        chunk = AIMessageChunk(content=full_text)
+        print(chunk)
+        acc.add_chunk(chunk)
+
+        msg = acc.get_last_assistant_text()
+        assert msg == "Of course, I can help with that. To get started, please provide me with a description of your project and let"
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

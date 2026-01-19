@@ -150,6 +150,7 @@ class GenericLangGraphChatAgent(BaseAgent):
     async def stream(self, query, session_id, task_id) -> AsyncIterable[dict[str, Any]]:
         # queue for tool/subagent streaming
         subagent_event_queue: asyncio.Queue[StreamEvent] = asyncio.Queue()
+        # queue for agent streaming
         output_queue: asyncio.Queue = asyncio.Queue()
 
         ### Subagent emit event

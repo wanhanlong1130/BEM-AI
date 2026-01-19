@@ -140,6 +140,17 @@ class AIMessageAccumulator:
         self._carry = ""
         return message
 
+    def get_last_assistant_text(self) -> str | None:
+        """
+                Get the last assistant text.
+
+                Returns:
+                    The assistant text (stripped of whitespace), or None if no assistant
+                """
+        if not self._assistant_parts:
+            return None
+        return self._assistant_parts[-1]
+
     def get_assistant_text(self) -> str | None:
         """
         Get the accumulated assistant content.
