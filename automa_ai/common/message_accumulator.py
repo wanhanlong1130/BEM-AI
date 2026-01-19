@@ -62,7 +62,20 @@ class AIMessageAccumulator:
         if not chunk.content:
             return
 
-        text = self._carry + chunk.content
+        content = chunk.content
+        if isinstance(content, list):
+            if not content:
+                return
+            content = content[0]
+            if isinstance(content, dict):
+                content = content.get("text") or ""
+            if not isinstance(content, str):
+                return
+
+        if not isinstance(content, str):
+            return
+
+        text = self._carry + content
         self._carry = ""
 
         while text:
