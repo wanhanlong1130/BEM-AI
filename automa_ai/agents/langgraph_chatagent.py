@@ -187,7 +187,7 @@ class GenericLangGraphChatAgent(BaseAgent):
                         print("Getting the chunk", chunk)
                     ck, meta = chunk
 
-                    if isinstance(ck, HumanMessage):
+                    if isinstance(ck, HumanMessage) and self.memory_manager:
                         # Enqueue human message for memory
                         await self._memory_write_queue.put(MemoryWriteEvent(message=ck, session_id=session_id, user_id=task_id))
 
@@ -202,7 +202,8 @@ class GenericLangGraphChatAgent(BaseAgent):
                                     query_id=self.metrics.current_query_id
                                 ))
                         # accumulate ai messages
-                        message_accumulator.add_chunk(ck)
+                        content = self._normalize_chunk_content(ck)
+                        self._accumulate_chunk(message_accumulator, ck, content)
 
                         # is task completed?
                         is_last_model_step = (
@@ -212,7 +213,6 @@ class GenericLangGraphChatAgent(BaseAgent):
                         )
 
                         if ck.content:
-                            content = self._normalize_chunk_content(ck)
                             if content is not None:
                                 if is_last_model_step:
                                     await self._emit_final_output(
@@ -410,9 +410,10 @@ class GenericLangGraphChatAgent(BaseAgent):
         artifact_text = message_accumulator.get_artifact_text()
 
         ai_message = message_accumulator.finalize()
-        await self._memory_write_queue.put(
-            MemoryWriteEvent(message=ai_message, session_id=session_id, user_id=task_id)
-        )
+        if self.memory_manager:
+            await self._memory_write_queue.put(
+                MemoryWriteEvent(message=ai_message, session_id=session_id, user_id=task_id)
+            )
         if artifact_text:
             try:
                 _, parsed = extract_and_parse_json(artifact_text)
@@ -433,3 +434,23 @@ class GenericLangGraphChatAgent(BaseAgent):
             "require_user_input": False,
             "content": final_text,
         })
+
+    @staticmethod
+    def _accumulate_chunk(
+        message_accumulator: AIMessageAccumulator,
+        chunk: AIMessageChunk,
+        normalized_content: str | None,
+    ) -> None:
+        content_for_accumulator = normalized_content if isinstance(normalized_content, str) else ""
+        if content_for_accumulator == chunk.content:
+            message_accumulator.add_chunk(chunk)
+            return
+
+        sanitized_chunk = AIMessageChunk(
+            content=content_for_accumulator,
+            additional_kwargs=chunk.additional_kwargs,
+            response_metadata=chunk.response_metadata,
+            tool_calls=getattr(chunk, "tool_calls", None),
+            id=chunk.id,
+        )
+        message_accumulator.add_chunk(sanitized_chunk)
