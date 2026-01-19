@@ -203,8 +203,7 @@ class GenericLangGraphChatAgent(BaseAgent):
                                     query_id=self.metrics.current_query_id
                                 ))
                         # accumulate ai messages
-                        content = self._normalize_chunk_content(ck)
-                        self._accumulate_chunk(message_accumulator, ck, content)
+                        message_accumulator.add_chunk(ck)
 
                         # is task completed?
                         is_last_model_step = (
@@ -214,6 +213,7 @@ class GenericLangGraphChatAgent(BaseAgent):
                         )
 
                         if ck.content:
+                            content = self._normalize_chunk_content(ck)
                             if content is not None:
                                 if is_last_model_step:
                                     await self._emit_final_output(
@@ -436,23 +436,3 @@ class GenericLangGraphChatAgent(BaseAgent):
             "require_user_input": False,
             "content": final_text,
         })
-
-    @staticmethod
-    def _accumulate_chunk(
-        message_accumulator: AIMessageAccumulator,
-        chunk: AIMessageChunk,
-        normalized_content: str | None,
-    ) -> None:
-        content_for_accumulator = normalized_content if isinstance(normalized_content, str) else ""
-        if content_for_accumulator == chunk.content:
-            message_accumulator.add_chunk(chunk)
-            return
-
-        sanitized_chunk = AIMessageChunk(
-            content=content_for_accumulator,
-            additional_kwargs=chunk.additional_kwargs,
-            response_metadata=chunk.response_metadata,
-            tool_calls=getattr(chunk, "tool_calls", None),
-            id=chunk.id,
-        )
-        message_accumulator.add_chunk(sanitized_chunk)
