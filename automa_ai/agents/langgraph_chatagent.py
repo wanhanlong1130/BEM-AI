@@ -376,7 +376,8 @@ class GenericLangGraphChatAgent(BaseAgent):
 
     @staticmethod
     def _format_subagent_event(event: StreamEvent) -> str:
-        content_str = f"\n\n[{event.source}] "
+        #content_str = f"\n\n[{event.source}] "
+        content_str = ""
         if event.metadata and event.metadata.get("final"):
             content_str += "(final) "
         content_str += event.content
