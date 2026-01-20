@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from pathlib import Path
 
@@ -9,18 +10,31 @@ from automa_ai.agents import GenericAgentType, GenericLLM
 from automa_ai.agents.agent_factory import AgentFactory
 from automa_ai.common.agent_registry import A2AServerManager, A2AAgentServer
 from automa_ai.common.mcp_registry import MCPServerConfig, MCPServerManager
+from automa_ai.memory.memory_types import MemoryType
 from examples.sim_chat_stream_demo.mcp_server.mcp_server import serve
 
 base_dir = Path(__file__).resolve().parent
 env_path = base_dir / '.env'
 load_dotenv(dotenv_path=env_path)
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+## Register memory plugin
+from automa_ai.memory.manager import MemoryStoreRegistry
+from automa_ai.memory.sqlite_memory_store import SQLiteMemoryStore
+from automa_ai.memory.chroma_memory_store import ChromaVectorMemoryStore
+
+MemoryStoreRegistry.register("default_sqlite", SQLiteMemoryStore)
+MemoryStoreRegistry.register("default_chroma", ChromaVectorMemoryStore)
+
+# MCP server
 weather_mcp_config = MCPServerConfig(
     name="weather_mcp",
     host="localhost",
     port=10000,
     serve=serve,
-    transport="sse"
+    transport="streamable-http"
 )
 
 
@@ -174,7 +188,28 @@ chatbot = AgentFactory(
     agent_type=GenericAgentType.LANGGRAPHCHAT,
     chat_model=GenericLLM.OLLAMA,
     model_base_url=chat_bot_base_url,
-    mcp_configs={"weather_mcp": weather_mcp_config},
+    # mcp_configs={"weather_mcp": weather_mcp_config},
+    memory_config={
+        "short_term_limit": 10,
+        "short_term_max": 20,
+        "long_term_strategy": "summarize",
+        "stores": [
+            {
+                "name": "default_sqlite",
+                "memory_type": MemoryType.SHORT_TERM,
+                "store_config": {
+                    "db_path": "/Users/xuwe123/github/BEM-AI/examples/sim_chat_stream_demo/memory.db"
+                }
+            },
+            {
+                "name": "default_chroma",
+                "memory_type": MemoryType.LONG_TERM,
+                "store_config": {
+                    "db_path": "/Users/xuwe123/github/BEM-AI/examples/sim_chat_stream_demo/long_term"
+                }
+            }
+        ]
+    },
     enable_metrics=True,
     debug=True
 )

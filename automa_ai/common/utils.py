@@ -5,6 +5,18 @@ from functools import wraps
 
 from automa_ai.common.mcp_registry import MCPServerConfig
 from automa_ai.common.types import ServerConfig
+from automa_ai.memory.memory_stores import MemoryStoreRegistry
+
+import importlib.metadata
+
+def load_memory_store_plugins():
+    for ep in importlib.metadata.entry_points(
+        group="automa_ai.memory_stores"
+    ):
+        print(f"Discover memory store plugin: {ep.name}")
+        store_cls = ep.load()
+        MemoryStoreRegistry.register(ep.name, store_cls)
+
 
 # Map MCPConfigServer to ServerConfig
 def map_mcp_config_to_server_config(mcp_config: MCPServerConfig) -> ServerConfig:

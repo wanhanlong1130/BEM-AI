@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import sys
+import traceback
 from multiprocessing import Process
 from typing import Optional, List, Dict, Callable
 from urllib.parse import urlparse
@@ -15,9 +16,18 @@ from a2a.types import AgentCard
 from automa_ai.common.agent_executor import GenericAgentExecutor
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.utils import wait_for_port
+from automa_ai.common.setup_logging import _init_child_logging
+
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+def _child_entrypoint(run_fn, logging_config):
+    _init_child_logging(logging_config)
+
+    # Load plugins BEFORE any agent is created
+    from automa_ai.common.utils import load_memory_store_plugins
+    load_memory_store_plugins()
+    run_fn()
 
 class A2AAgentServer:
     def __init__(self, agent_builder: Callable[[], BaseAgent], card: AgentCard, log_dir: str="./logs"):
@@ -28,18 +38,10 @@ class A2AAgentServer:
         self.host_name = parsed_url.hostname
         self.port = parsed_url.port
         self.log_dir = log_dir
-
         self.server: Optional[uvicorn.Server] = None
         self.shutdown_event = asyncio.Event()
 
     def run(self):
-        log_file = os.path.join(self.log_dir, f"{self.card.name}_server_{self.port}.log")
-        os.makedirs(self.log_dir, exist_ok=True)
-
-        # Redirect stdout and stderr to log file — like `> logfile 2>&1`
-        sys.stdout = open(log_file, "a", buffering=1)
-        sys.stderr = sys.stdout
-
         try:
             logger.info("Building the agent....")
             agent = self.agent_builder()
@@ -68,9 +70,10 @@ class A2AAgentServer:
 
 
 class A2AServerManager:
-    def __init__(self):
+    def __init__(self, logging_config: dict | None = None):
         self.servers: List[A2AAgentServer] = []
         self.processes: Dict[str, Process] = {}
+        self.logging_config = logging_config
 
     def add_server(self, agent_server: A2AAgentServer) -> bool:
         """Add an agent configuration"""
@@ -85,7 +88,10 @@ class A2AServerManager:
             server_name = server.name
             logger.info(f"Booting agent: {server_name}")
             # Create and start process
-            process = Process(target=server.run)
+            process = Process(
+                target=_child_entrypoint,
+                args=(server.run, self.logging_config),
+            )
             process.start()
 
             try:

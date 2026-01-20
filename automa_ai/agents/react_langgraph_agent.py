@@ -1,7 +1,7 @@
-import logging
 import re
 from json import JSONDecodeError
-from typing import Dict, AsyncIterable, Any, Callable
+from typing import Dict, AsyncIterable, Any, Callable, List
+from asyncio import Queue
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
@@ -10,16 +10,17 @@ from langgraph.checkpoint.memory import MemorySaver
 from langchain.agents import create_agent
 from pydantic import BaseModel
 
+from automa_ai.agents.remote_agent import SubAgentSpec, make_subagent_tool, StreamEvent, \
+    build_subagent_delegation_instruction
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.response_parser import extract_and_parse_json
+from automa_ai.common.setup_logging import setup_file_logger
 from automa_ai.common.types import ServerConfig
 from automa_ai.metrics.collector import MetricsCollector
 from automa_ai.metrics.extractor import extract_metrics_from_chunk
 
+
 memory = MemorySaver()
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s | %(levelname)-8s | "
-                           "%(module)s:%(funcName)s:%(lineno)d - %(message)s")
-logger = logging.getLogger(__name__)
 
 class GenericLangGraphReactAgent(BaseAgent):
     """A generic LangGraph react agent"""
@@ -33,17 +34,18 @@ class GenericLangGraphReactAgent(BaseAgent):
         response_format: type[BaseModel] | None,
         mcp_servers: Dict[str, ServerConfig] | None = None,
         retriever: Callable | None = None,
+        subagents: List[SubAgentSpec] | None = None,
         enable_metrics: bool = False,
         debug: bool = False,
     ):
 
-        logger.info("Initializing a LangGraph react agent")
         # Remove all empty strings
         super().__init__(
             agent_name=agent_name,
             description=description,
             content_types=["text", "text/plain"],
         )
+        self.logger = setup_file_logger(base_log_dir="./logs", logger_name=agent_name)
         self.model = chat_model
         self.response_format = response_format
         self.instructions = instructions
@@ -55,13 +57,14 @@ class GenericLangGraphReactAgent(BaseAgent):
         self.metrics = None
         if enable_metrics:
             self.metrics = MetricsCollector()
+        self.subagents = subagents
 
-    async def init_graph(self):
+    async def init_graph(self, emitter: Callable[[StreamEvent], None]):
         """Load the agent graph -> this can be overridden to support static multi-agent setup."""
-        logger.info(f"Initializing {self.agent_name} metadata")
+        self.logger.info(f"Initializing {self.agent_name} metadata")
         if self.mcp_servers:
             # Loading mcp server clients.
-            logger.info(f"Subscribe to MCPs through sse")
+            self.logger.info(f"Subscribe to MCPs through sse")
 
             self.client = MultiServerMCPClient(
                 {
@@ -80,7 +83,16 @@ class GenericLangGraphReactAgent(BaseAgent):
             for tool in tools:
                 if self.debug:
                     print(self.agent_name, f"Loaded tools {tool.name}")
-                logger.info(f"Loaded tools {tool.name}")
+                self.logger.info(f"Loaded tools {tool.name}")
+
+        if self.subagents:
+            for subagent in self.subagents:
+                tools.append(make_subagent_tool(subagent, emitter))
+            # build up the instruction
+            self.instructions = (
+                f"{self.instructions}\n\n"
+                f"{build_subagent_delegation_instruction(self.subagents)}"
+            )
 
         self.graph = create_agent(
             self.model,
@@ -92,12 +104,38 @@ class GenericLangGraphReactAgent(BaseAgent):
 
     async def invoke(self, query, sessionId):
         config = {"configurable": {"thread_id": sessionId}}
+        # queue for tool/subagent streaming
+        subagent_event_queue: Queue[StreamEvent] = Queue()
+
+        def emit_subagent_event(e: StreamEvent):
+            """
+            Called by tools / subagents to stream intermediate output.
+            Must be non-blocking.
+            """
+            subagent_event_queue.put_nowait(e)
+
+        emitter = emit_subagent_event
+
         if not self.graph:
-            await self.init_graph()
+            await self.init_graph(emitter)
         response = await self.graph.ainvoke({"messages": [("user", query)]}, config)
         return response
 
     async def stream(self, query, session_id, task_id) -> AsyncIterable[dict[str, Any]]:
+        # use to track the tool call steps
+        active_tool_calls = 0
+        # queue for tool/subagent streaming
+        subagent_event_queue: Queue[StreamEvent] = Queue()
+
+        def emit_subagent_event(e: StreamEvent):
+            """
+            Called by tools / subagents to stream intermediate output.
+            Must be non-blocking.
+            """
+            subagent_event_queue.put_nowait(e)
+
+        emitter = emit_subagent_event
+
         # If selected to track metrics
         if self.metrics:
             if self.metrics.current_query_id and self.metrics.current_query_id != query:
@@ -123,14 +161,31 @@ class GenericLangGraphReactAgent(BaseAgent):
         # Assemble message
         inputs = {"messages": [{"role": "user", "content": augmented_query}]}
         config = {"configurable": {"thread_id": session_id}}
-        logger.info(
+        self.logger.info(
             f"Running planner agent stream for session {session_id} {task_id} with input {query}"
         )
         if not self.graph:
-            await self.init_graph()
+            await self.init_graph(emitter)
         # seen_messages = set()
         # Collect all streaming messages first
         async for chunk in self.graph.astream(inputs, config, stream_mode="updates"):
+            # surface local tool/subagent streaming
+            while not subagent_event_queue.empty():
+                event = subagent_event_queue.get_nowait()
+                # Build informative content
+                content_str = f"\n\n[{event.source}] "
+
+                if event.metadata and event.metadata.get("final"):
+                    content_str += "(final) "
+                content_str += event.content
+
+                yield {
+                    "response_type": "text",
+                    "is_task_complete": False,
+                    "require_user_input": False,
+                    "content": content_str,
+                }
+
             if self.debug:
                 print("Getting the chunk", chunk)
             for step, data in chunk.items():
@@ -138,8 +193,8 @@ class GenericLangGraphReactAgent(BaseAgent):
                     if "messages" in data:
                         # Take out the last AI Message
                         message = data["messages"][-1]
-                        logger.info(f"Streaming message: {message}")
-                        logger.info(
+                        self.logger.info(f"Streaming message: {message}")
+                        self.logger.info(
                             f"Message type is: {type(message)}, and message is: {isinstance(message, AIMessage)} item type is: {type(data)}"
                         )
                         if isinstance(message, AIMessage):
@@ -189,7 +244,7 @@ class GenericLangGraphReactAgent(BaseAgent):
                                             "content": parsed,
                                         }
                                     if parsed.get("status") == "completed":
-                                        logger.info(f"completed task: {parsed}")
+                                        self.logger.info(f"completed task: {parsed}")
                                         yield {
                                             "response_type": "data",
                                             "is_task_complete": True,
@@ -229,7 +284,7 @@ class GenericLangGraphReactAgent(BaseAgent):
                             except JSONDecodeError as jde:
                                 if self.debug:
                                     print(f"Failed parsing JSON data, error message: {jde}")
-                                logger.info(f"Failed parsing JSON data, error message: {jde}")
+                                self.logger.info(f"Failed parsing JSON data, error message: {jde}")
                                 if content.startswith("<think>"):
                                     # There should be a better way to handle this through network but
                                     # Let's just settle with a simple print for now.
@@ -250,7 +305,7 @@ class GenericLangGraphReactAgent(BaseAgent):
                                 if self.debug:
                                     print(f"Failed matching the ai message, error message: {ae}")
                                 # cannot parse the message to JSON. return raw msg and ask for user input
-                                logger.info(f"Failed matching the ai message, error message: {ae}")
+                                self.logger.info(f"Failed matching the ai message, error message: {ae}")
                                 yield {
                                     "response_type": "text",
                                     "is_task_complete": False,
@@ -260,7 +315,7 @@ class GenericLangGraphReactAgent(BaseAgent):
                             except Exception as e:
                                 if self.debug:
                                     print(f"Failed matching the ai message, error message: {e}")
-                                logger.info(f"Failed matching the ai message, error message: {e}")
+                                self.logger.info(f"Failed matching the ai message, error message: {e}")
                                 if content.startswith("<think>"):
                                     # There should be a better way to handle this through network but
                                     # Let's just settle with a simple print for now.

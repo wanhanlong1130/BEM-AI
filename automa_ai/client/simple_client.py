@@ -17,7 +17,7 @@ from a2a.utils.constants import (
     EXTENDED_AGENT_CARD_PATH,
 )
 
-logging.basicConfig(level=logging.INFO)
+
 logger = logging.getLogger(__name__)  # Get a logger instance
 
 class SimpleClient:

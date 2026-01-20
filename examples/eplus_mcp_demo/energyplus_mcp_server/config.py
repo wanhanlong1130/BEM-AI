@@ -101,20 +101,6 @@ class Config:
             "USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw"
         )
 
-    def _setup_logging(self):
-        """Configure logging based on configuration"""
-        log_level = getattr(logging, self.server.log_level.upper(), logging.INFO)
-
-        # Configure logging format
-        logging.basicConfig(
-            level=log_level,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
-
-        logger = logging.getLogger(__name__)
-        logger.info(f"Logging configured: level={self.server.log_level}")
-
     def _validate_config(self):
         """Validate configuration and log warnings for missing components"""
         logger = logging.getLogger(__name__)

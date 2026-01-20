@@ -23,8 +23,8 @@ class ServiceOrchestrator:
         :param orchestrator: orchestrator agent
         :param agent_cards_dir: directory to agent cards.
         """
-        self.mcp_manager = MCPServerManager()
-        self.a2a_manager = A2AServerManager()
+        self.mcp_manager = MCPServerManager(logging_config=orchestrator_config.logging_config)
+        self.a2a_manager = A2AServerManager(logging_config=orchestrator_config.logging_config)
         self.port_list = []
         # Check agent_card_validity
         self.orchestrator_port = orchestrator_port

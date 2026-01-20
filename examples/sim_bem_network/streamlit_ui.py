@@ -47,7 +47,9 @@ def main():
             async def process_stream():
                 nonlocal full_response
                 with st.spinner("🤖 Thinking..."):
-                    async for chunk in send_message_async(prompt, st.session_state.get("context_id")):
+                    async for chunk in send_message_async(
+                        prompt, st.session_state.get("context_id")
+                    ):
                         print(chunk)
                         text_part = None
 
@@ -64,11 +66,15 @@ def main():
                                 artifact = result.get("artifact", {})
                                 parts = artifact.get("parts", [])
                                 text_fragments = [
-                                    p.get("text") for p in parts if p.get("kind") == "text" and p.get("text")
+                                    p.get("text")
+                                    for p in parts
+                                    if p.get("kind") == "text" and p.get("text")
                                 ]
                                 if text_fragments:
                                     text_part = "\n".join(text_fragments)
-                                    full_response += f"\n\n🧩 **Artifact Update**\n{text_part}"
+                                    full_response += (
+                                        f"\n\n🧩 **Artifact Update**\n{text_part}"
+                                    )
                                     message_placeholder.markdown(full_response + "▌")
                             # === Handle status-update ===
                             if kind == "status-update":

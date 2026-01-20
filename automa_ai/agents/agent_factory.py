@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Dict
+from typing import Dict, List
 
 from a2a.types import AgentCard
 from google.adk.models.lite_llm import LiteLlm
@@ -16,12 +16,13 @@ from automa_ai.agents.adk_agent import GenericADKAgent
 from automa_ai.agents.langgraph_chatagent import GenericLangGraphChatAgent
 from automa_ai.agents.orchestrator_network_agent import OrchestratorNetworkAgent
 from automa_ai.agents.react_langgraph_agent import GenericLangGraphReactAgent
+from automa_ai.agents.remote_agent import SubAgentSpec
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.mcp_registry import MCPServerConfig
 from automa_ai.common.retriever import RetrieverConfig, ChromaRetriever
 from automa_ai.common.utils import map_mcp_config_to_server_config
+from automa_ai.memory.manager import DefaultMemoryManager
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def resolve_chat_model(backend: GenericLLM, model_name: str, agent_type: GenericAgentType, base_url: str | None = None, api_key: str | None = None, api_version: str | None = None):
@@ -126,6 +127,8 @@ class AgentFactory:
         response_format: type[BaseModel] | None = None,
         mcp_configs: Dict[str, MCPServerConfig] | None = None,
         retriever_config: RetrieverConfig | None = None,
+        subagent_config: List[SubAgentSpec] | None = None,
+        memory_config: Dict | None = None,
         model_base_url: str | None = None,
         api_key: str | None = None,
         api_version: str | None = None,
@@ -140,6 +143,8 @@ class AgentFactory:
         self.response_format = response_format
         self.mcp_configs = mcp_configs
         self.retriever_config = retriever_config
+        self.subagent_config = subagent_config
+        self.memory_config = memory_config
         self.model_base_url = model_base_url
         self.api_key = api_key
         self.api_version = api_version
@@ -160,6 +165,12 @@ class AgentFactory:
                 for server_name, config in self.mcp_configs.items()
             }
         logger.info(f"Successful log the MCP servers for agent: {self.card.name}...")
+        logger.info(f"Initializing a {self.agent_type.value} agent")
+
+        # Resolve memories
+        memory_manager = None
+        if self.memory_config:
+            memory_manager = DefaultMemoryManager.from_config(self.memory_config)
 
         if self.agent_type == GenericAgentType.ADK:
             return GenericADKAgent(
@@ -178,6 +189,8 @@ class AgentFactory:
                 chat_model=chat_model,
                 mcp_servers=mcp_servers,
                 retriever=resolve_retriever(self.retriever_config) if self.retriever_config else None,
+                subagents=self.subagent_config if self.subagent_config else None,
+                memory_manager=memory_manager,
                 enable_metrics = self.enable_metrics,
                 debug=self.debug
             )
