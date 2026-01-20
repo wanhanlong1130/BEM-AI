@@ -62,7 +62,20 @@ class AIMessageAccumulator:
         if not chunk.content:
             return
 
-        text = self._carry + chunk.content
+        content = chunk.content
+        if isinstance(content, list):
+            if not content:
+                return
+            content = content[0]
+            if isinstance(content, dict):
+                content = content.get("text") or ""
+            if not isinstance(content, str):
+                return
+
+        if not isinstance(content, str):
+            return
+
+        text = self._carry + content
         self._carry = ""
 
         while text:
@@ -139,6 +152,17 @@ class AIMessageAccumulator:
         self._in_artifact = False
         self._carry = ""
         return message
+
+    def get_last_assistant_text(self) -> str | None:
+        """
+                Get the last assistant text.
+
+                Returns:
+                    The assistant text (stripped of whitespace), or None if no assistant
+                """
+        if not self._assistant_parts:
+            return None
+        return self._assistant_parts[-1]
 
     def get_assistant_text(self) -> str | None:
         """

@@ -131,7 +131,7 @@ class A2AToolAdapter:
                         StreamEvent(
                             source=f"subagent:{self.subagent.agent_name}",
                             type="subagent_chunk",
-                            content=question + "\n",
+                            content=question,
                             metadata=None
                         )
                     )
@@ -143,7 +143,7 @@ class A2AToolAdapter:
                         StreamEvent(
                             source=f"subagent:{self.subagent.agent_name}",
                             type="subagent_chunk",
-                            content=message + "\n",
+                            content=message,
                             metadata=None
                         )
                     )
@@ -157,7 +157,7 @@ class A2AToolAdapter:
                         StreamEvent(
                             source=f"subagent:{self.subagent.agent_name}",
                             type="subagent_chunk",
-                            content=text + "\n",
+                            content=text,
                             metadata=None
                         )
                     )
