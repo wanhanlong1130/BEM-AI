@@ -16,6 +16,7 @@ class BaseMemoryStore(ABC):
         """Write a memory entry to storage."""
         pass
 
+    @abstractmethod
     async def awrite_memory(self, entries: List[MemoryEntry]) -> None:
         """Asynchronous Write a memory entry to storage."""
         await asyncio.to_thread(self.write_memory, entries)
@@ -32,6 +33,7 @@ class BaseMemoryStore(ABC):
         """Read memory entries from storage."""
         pass
 
+    @abstractmethod
     async def aread_memories(
             self,
             query: Optional[str] = None,
@@ -44,13 +46,14 @@ class BaseMemoryStore(ABC):
         return memory_list
 
     @abstractmethod
-    def delete_memory(self, memory_ids: List[str]) -> bool:
+    def delete_memory(self, memory_id: str) -> bool:
         """Delete a specific memory entry."""
         pass
 
-    async def adelete_memory(self, memory_ids: List[str]) -> bool:
+    @abstractmethod
+    async def adelete_memory(self, memory_id: str) -> bool:
         """Asynchronous Delete a specific memory entry."""
-        delete = await asyncio.to_thread(self.delete_memory, memory_ids)
+        delete = await asyncio.to_thread(self.delete_memory, memory_id)
         return delete
 
     @abstractmethod
@@ -65,7 +68,7 @@ class MemoryStoreRegistry:
     @classmethod
     def register(cls, name: str, store_cls: type[BaseMemoryStore]):
         if not issubclass(store_cls, BaseMemoryStore):
-            raise TypeError("MemoryStore must subclass MemoryStore")
+            raise TypeError("MemoryStore must subclass BaseMemoryStore")
         cls._stores[name] = store_cls
 
     @classmethod

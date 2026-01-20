@@ -18,7 +18,8 @@ class SQLiteMemoryStore(BaseMemoryStore):
         }
         """
         db_path = config.get("db_path")
-        assert db_path, "db_path must be defined for SQLiteMemoryStore."
+        if not db_path:
+            raise ValueError("db_path must be defined for SQLiteMemoryStore.")
 
         return cls(
             db_path = db_path
@@ -81,25 +82,21 @@ class SQLiteMemoryStore(BaseMemoryStore):
             limit: int = 10
     ) -> List[MemoryEntry]:
         """Read memory entries from SQLite storage."""
-        sql = "SELECT * FROM memories WHERE "
+        sql = "SELECT * FROM memories"
         params = []
-
+        conditions = []
         if session_id:
-            sql += "session_id = ? AND "
+            conditions.append("session_id = ?")
             params.append(session_id)
-
         if user_id:
-            sql += "user_id = ? AND "
+            conditions.append("user_id = ?")
             params.append(user_id)
-
         if memory_type:
-            sql += " memory_type = ?"
+            conditions.append("memory_type = ?")
             params.append(memory_type.value)
 
-        # Needs work - I don't think this will match anything
-        #if query:
-        #    sql += " AND (content LIKE ? OR metadata LIKE ?)"
-        #    params.extend([f"%{query}%", f"%{query}%"])
+        if conditions:
+            sql += " WHERE " + " AND ".join(conditions)
 
         sql += " ORDER BY timestamp DESC LIMIT ?"
         params.append(limit)
@@ -110,17 +107,18 @@ class SQLiteMemoryStore(BaseMemoryStore):
 
         memories = []
         for row in rows:
-            print("retrieved row: ", row)
+            # print("retrieved row: ", row)
             entry = MemoryEntry(
                 id=row[0],
                 session_id=row[1],
-                content=row[2],
-                metadata=json.loads(row[3]) if row[3] else {},
-                timestamp=datetime.fromtimestamp(row[4]),
-                memory_type=MemoryType(row[5]),
-                importance_score=row[6],
-                access_count=row[7],
-                last_accessed=datetime.fromtimestamp(row[8])
+                user_id=row[2],
+                content=row[3],
+                metadata=json.loads(row[4]) if row[4] else {},
+                timestamp=datetime.fromtimestamp(row[5]),
+                memory_type=MemoryType(row[6]),
+                importance_score=row[7],
+                access_count=row[8],
+                last_accessed=datetime.fromtimestamp(row[9])
             )
             memories.append(entry)
 

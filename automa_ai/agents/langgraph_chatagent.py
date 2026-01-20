@@ -311,7 +311,7 @@ class GenericLangGraphChatAgent(BaseAgent):
                 await self.memory_manager.add_memory(event.message, session_id=event.session_id, user_id=event.user_id)
                 asyncio.create_task(self.memory_manager.manage_memory_size())
             except Exception as e:
-                print("Memory write failed:", e)
+                logger.exception("Memory manager failed")
 
     async def _build_stream_inputs(self, query: str, session_id: str) -> dict[str, Any]:
         context = ""
@@ -346,13 +346,12 @@ class GenericLangGraphChatAgent(BaseAgent):
                     {formatted_memories}
                     """
 
-        inputs = {
-            "messages": [
-                {"role": "system", "content": additional_system_query},
-                {"role": "user", "content": query},
-            ]
-        }
-        print("inputs to the llm: ", inputs)
+        messages = [{"role": "user", "content": query}]
+        if additional_system_query.strip():
+            messages.insert(0, {"role": "system", "content": additional_system_query})
+        inputs = {"messages": messages}
+
+        logger.debug("Inputs to the LLM: %s", inputs)
         return inputs
 
     async def _forward_subagent_events(
