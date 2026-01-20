@@ -228,7 +228,7 @@ class GenericLangGraphChatAgent(BaseAgent):
                                         "response_type": "text",
                                         "is_task_complete": False,
                                         "require_user_input": False,
-                                        "content": content,
+                                        "content": message_accumulator.get_last_assistant_text(),
                                     })
 
                         elif ck.tool_calls:
