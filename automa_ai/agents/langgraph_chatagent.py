@@ -428,6 +428,7 @@ class GenericLangGraphChatAgent(BaseAgent):
                     })
                     return
             except Exception:
+                # Intentionally pass.
                 pass
 
         await output_queue.put({
