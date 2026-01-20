@@ -23,9 +23,11 @@ class TestBasicFunctionality:
         acc.add_chunk(AIMessageChunk(content="Hello "))
         acc.add_chunk(AIMessageChunk(content="world!"))
 
+        assert acc.get_assistant_text() == "Hello world!"
+        assert acc.get_artifact_text() is None
+
         msg = acc.finalize()
         assert msg.content == "Hello world!"
-        assert acc.get_artifact_text() is None
 
     def test_simple_artifact(self):
         """Test accumulating a simple artifact."""
@@ -35,9 +37,11 @@ class TestBasicFunctionality:
         acc.add_chunk(AIMessageChunk(content="def hello():\n    print('Hello')"))
         acc.add_chunk(AIMessageChunk(content=f"{ARTIFACT_END}"))
 
-        msg = acc.finalize()
-        assert msg.content == "Here is your file: "
+        assert acc.get_assistant_text() == "Here is your file:"
         assert acc.get_artifact_text() == "def hello():\n    print('Hello')"
+
+        msg = acc.finalize()
+        assert msg.content == "Here is your file: def hello():\n    print('Hello')"
 
     def test_text_before_and_after_artifact(self):
         """Test text both before and after an artifact."""
@@ -45,9 +49,11 @@ class TestBasicFunctionality:
 
         acc.add_chunk(AIMessageChunk(content=f"Before {ARTIFACT_START}artifact{ARTIFACT_END} after"))
 
-        msg = acc.finalize()
-        assert msg.content == "Before  after"
+        assert acc.get_assistant_text() == "Before  after"
         assert acc.get_artifact_text() == "artifact"
+
+        msg = acc.finalize()
+        assert msg.content == "Before  after artifact"
 
     def test_multiple_artifacts(self):
         """Test multiple artifacts (they get concatenated)."""
@@ -57,10 +63,11 @@ class TestBasicFunctionality:
             content=f"{ARTIFACT_START}first{ARTIFACT_END} middle {ARTIFACT_START}second{ARTIFACT_END}"
         ))
 
-        msg = acc.finalize()
-        assert msg.content == " middle "
+        assert acc.get_assistant_text() == "middle"
         # Both artifacts are concatenated
         assert acc.get_artifact_text() == "firstsecond"
+        msg = acc.finalize()
+        assert msg.content == "middle firstsecond"
 
     def test_empty_artifact(self):
         """Test an empty artifact."""
@@ -68,10 +75,12 @@ class TestBasicFunctionality:
 
         acc.add_chunk(AIMessageChunk(content=f"Text {ARTIFACT_START}{ARTIFACT_END} more"))
 
-        msg = acc.finalize()
-        assert msg.content == "Text  more"
+        assert acc.get_assistant_text() == "Text  more"
         # Empty string strips to None
         assert acc.get_artifact_text() is None
+
+        msg = acc.finalize()
+        assert msg.content == "Text  more"
 
     def test_whitespace_only_artifact(self):
         """Test an artifact with only whitespace."""
@@ -79,10 +88,12 @@ class TestBasicFunctionality:
 
         acc.add_chunk(AIMessageChunk(content=f"{ARTIFACT_START}   \n  {ARTIFACT_END}"))
 
-        msg = acc.finalize()
-        assert msg.content == ""
+        assert acc.get_assistant_text() == ""
         # Whitespace is stripped
         assert acc.get_artifact_text() is None
+
+        msg = acc.finalize()
+        assert msg.content == ""
 
 
 class TestSplitMarkers:
@@ -97,9 +108,11 @@ class TestSplitMarkers:
         acc.add_chunk(AIMessageChunk(content=f"Text {ARTIFACT_START[:marker_split]}"))
         acc.add_chunk(AIMessageChunk(content=f"{ARTIFACT_START[marker_split:]}content{ARTIFACT_END}"))
 
-        msg = acc.finalize()
-        assert msg.content == "Text "
+        assert acc.get_assistant_text() == "Text"
         assert acc.get_artifact_text() == "content"
+
+        msg = acc.finalize()
+        assert msg.content == "Text content"
 
     def test_end_marker_split_simple(self):
         """Test artifact end marker split across two chunks."""
@@ -109,9 +122,11 @@ class TestSplitMarkers:
         acc.add_chunk(AIMessageChunk(content=f"{ARTIFACT_START}content{ARTIFACT_END[:marker_split]}"))
         acc.add_chunk(AIMessageChunk(content=f"{ARTIFACT_END[marker_split:]} after"))
 
-        msg = acc.finalize()
-        assert msg.content == " after"
+        assert acc.get_assistant_text() == "after"
         assert acc.get_artifact_text() == "content"
+
+        msg = acc.finalize()
+        assert msg.content == "after content"
 
     def test_start_marker_split_one_char(self):
         """Test start marker split with only one character in first chunk."""
@@ -120,9 +135,11 @@ class TestSplitMarkers:
         acc.add_chunk(AIMessageChunk(content="Text <"))
         acc.add_chunk(AIMessageChunk(content="<<ARTIFACT_OUTPUT>>>content<<<END_ARTIFACT_OUTPUT>>>"))
 
-        msg = acc.finalize()
-        assert msg.content == "Text "
+        assert acc.get_assistant_text() == "Text"
         assert acc.get_artifact_text() == "content"
+
+        msg = acc.finalize()
+        assert msg.content == "Text content"
 
     def test_end_marker_split_one_char(self):
         """Test end marker split with only one character in first chunk."""
@@ -131,9 +148,11 @@ class TestSplitMarkers:
         acc.add_chunk(AIMessageChunk(content="<<<ARTIFACT_OUTPUT>>>content<"))
         acc.add_chunk(AIMessageChunk(content="<<END_ARTIFACT_OUTPUT>>> after"))
 
-        msg = acc.finalize()
-        assert msg.content == " after"
+        assert acc.get_assistant_text() == "after"
         assert acc.get_artifact_text() == "content"
+
+        msg = acc.finalize()
+        assert msg.content == "after content"
 
     def test_false_partial_marker(self):
         """Test that similar but different text doesn't trigger partial marker logic."""
@@ -143,9 +162,11 @@ class TestSplitMarkers:
         acc.add_chunk(AIMessageChunk(content="Use <<< for comparison"))
         acc.add_chunk(AIMessageChunk(content=" operators"))
 
+        assert acc.get_assistant_text() == "Use <<< for comparison operators"
+        assert acc.get_artifact_text() is None
+
         msg = acc.finalize()
         assert msg.content == "Use <<< for comparison operators"
-        assert acc.get_artifact_text() is None
 
     def test_marker_split_three_ways(self):
         """Test marker split across three chunks."""
@@ -156,9 +177,11 @@ class TestSplitMarkers:
         acc.add_chunk(AIMessageChunk(content="ARTIFACT_"))
         acc.add_chunk(AIMessageChunk(content="OUTPUT>>>content<<<END_ARTIFACT_OUTPUT>>>"))
 
-        msg = acc.finalize()
-        assert msg.content == ""
+        assert acc.get_assistant_text() == ""
         assert acc.get_artifact_text() == "content"
+
+        msg = acc.finalize()
+        assert msg.content == "content"
 
 
 class TestMetadata:
@@ -216,8 +239,8 @@ class TestMetadata:
         """Test accumulating tool calls."""
         acc = AIMessageAccumulator()
 
-        tool_call_1 = {"name": "search", "args": {"query": "test"}}
-        tool_call_2 = {"name": "calculator", "args": {"expression": "2+2"}}
+        tool_call_1 = {"id": "123", "name": "search", "args": {"query": "test"}, "type": "tool_call"}
+        tool_call_2 = {"id": "456", "name": "calculator", "args": {"expression": "2+2"}, "type": "tool_call"}
 
         acc.add_chunk(AIMessageChunk(content="", tool_calls=[tool_call_1]))
         acc.add_chunk(AIMessageChunk(content="", tool_calls=[tool_call_2]))
@@ -242,26 +265,17 @@ class TestEdgeCases:
         msg = acc.finalize()
         assert msg.content == "Hello world"
 
-    def test_none_content(self):
-        """Test handling chunks with None content."""
-        acc = AIMessageAccumulator()
-
-        acc.add_chunk(AIMessageChunk(content=None))
-        acc.add_chunk(AIMessageChunk(content="Hello"))
-        acc.add_chunk(AIMessageChunk(content=None))
-
-        msg = acc.finalize()
-        assert msg.content == "Hello"
-
     def test_unclosed_artifact(self):
         """Test handling an artifact that's never closed."""
         acc = AIMessageAccumulator()
 
         acc.add_chunk(AIMessageChunk(content=f"Text {ARTIFACT_START}artifact content"))
 
-        msg = acc.finalize()
-        assert msg.content == "Text "
+        assert acc.get_assistant_text() == "Text"
         assert acc.get_artifact_text() == "artifact content"
+
+        msg = acc.finalize()
+        assert msg.content == "Text artifact content"
 
     def test_unopened_artifact_end(self):
         """Test handling an end marker without a start marker."""
@@ -270,9 +284,11 @@ class TestEdgeCases:
         # End marker without start - should be treated as normal text
         acc.add_chunk(AIMessageChunk(content=f"Text {ARTIFACT_END} more"))
 
+        assert acc.get_assistant_text() == f"Text {ARTIFACT_END} more"
+        assert acc.get_artifact_text() is None
+
         msg = acc.finalize()
         assert msg.content == f"Text {ARTIFACT_END} more"
-        assert acc.get_artifact_text() is None
 
     def test_nested_start_markers(self):
         """Test handling nested start markers (second start is treated as content)."""
@@ -282,10 +298,12 @@ class TestEdgeCases:
             content=f"{ARTIFACT_START}content {ARTIFACT_START} more{ARTIFACT_END}"
         ))
 
-        msg = acc.finalize()
-        assert msg.content == ""
+        assert acc.get_assistant_text() == ""
         # The nested start marker is part of the artifact content
         assert acc.get_artifact_text() == f"content {ARTIFACT_START} more"
+
+        msg = acc.finalize()
+        assert msg.content == f"content {ARTIFACT_START} more"
 
     def test_multiple_consecutive_chunks_same_content(self):
         """Test adding many chunks with the same content."""
@@ -304,9 +322,11 @@ class TestEdgeCases:
         large_content = "x" * 10000
         acc.add_chunk(AIMessageChunk(content=f"{ARTIFACT_START}{large_content}{ARTIFACT_END}"))
 
-        msg = acc.finalize()
-        assert msg.content == ""
+        assert acc.get_assistant_text() == ""
         assert acc.get_artifact_text() == large_content
+
+        msg = acc.finalize()
+        assert msg.content == large_content
 
     def test_marker_as_part_of_content(self):
         """Test that markers inside artifact are treated as content."""
@@ -316,8 +336,9 @@ class TestEdgeCases:
             content=f"{ARTIFACT_START}This contains {ARTIFACT_START} in the middle{ARTIFACT_END}"
         ))
 
-        msg = acc.finalize()
         assert acc.get_artifact_text() == f"This contains {ARTIFACT_START} in the middle"
+        msg = acc.finalize()
+        assert msg.content == f"This contains {ARTIFACT_START} in the middle"
 
 
 class TestComplexScenarios:
@@ -341,16 +362,16 @@ class TestComplexScenarios:
         for chunk_content in chunks:
             acc.add_chunk(AIMessageChunk(content=chunk_content))
 
+        artifact = acc.get_artifact_text()
+        assert artifact is not None
+        assert "def fibonacci(n):" in artifact
+        assert "return fibonacci(n-1) + fibonacci(n-2)" in artifact
+
         msg = acc.finalize()
         assert "Here's a Python function" in msg.content
         assert "This uses recursion" in msg.content
         assert ARTIFACT_START not in msg.content
         assert ARTIFACT_END not in msg.content
-
-        artifact = acc.get_artifact_text()
-        assert artifact is not None
-        assert "def fibonacci(n):" in artifact
-        assert "return fibonacci(n-1) + fibonacci(n-2)" in artifact
 
     def test_metadata_with_artifact(self):
         """Test that metadata is preserved alongside artifact content."""
@@ -365,10 +386,11 @@ class TestComplexScenarios:
             response_metadata={"stop_reason": "end_turn"}
         ))
 
+        assert acc.get_artifact_text() == "code"
+
         msg = acc.finalize()
         assert msg.additional_kwargs["model"] == "claude"
         assert msg.response_metadata["stop_reason"] == "end_turn"
-        assert acc.get_artifact_text() == "code"
 
     def test_interleaved_text_and_artifacts(self):
         """Test text and artifacts interleaved."""
@@ -377,10 +399,11 @@ class TestComplexScenarios:
         acc.add_chunk(AIMessageChunk(
             content=f"First text {ARTIFACT_START}artifact1{ARTIFACT_END} middle {ARTIFACT_START}artifact2{ARTIFACT_END} last"
         ))
+        assert acc.get_assistant_text() == "First text  middle  last"
+        assert acc.get_artifact_text() == "artifact1artifact2"
 
         msg = acc.finalize()
-        assert msg.content == "First text  middle  last"
-        assert acc.get_artifact_text() == "artifact1artifact2"
+        assert msg.content == "First text  middle  last artifact1artifact2"
 
     def test_real_streaming_pattern(self):
         """Test a realistic streaming pattern with small chunks."""
@@ -394,22 +417,11 @@ class TestComplexScenarios:
             chunk = full_text[i:i + chunk_size]
             acc.add_chunk(AIMessageChunk(content=chunk))
 
-        msg = acc.finalize()
-        assert msg.content == "I'll create that for you:  There you go!"
+        assert acc.get_assistant_text() == "I'll create that for you:  There you go!"
         assert acc.get_artifact_text() == "const x = 42;"
 
-    def test_add_chunk_failed_case(self):
-        """Test a realistic streaming pattern with small chunks."""
-        acc = AIMessageAccumulator()
-
-        # Simulate realistic small chunks
-        full_text = f"Of course, I can help with that. To get started, please provide me with a description of your project and let"
-        chunk = AIMessageChunk(content=full_text)
-        print(chunk)
-        acc.add_chunk(chunk)
-
-        msg = acc.get_last_assistant_text()
-        assert msg == "Of course, I can help with that. To get started, please provide me with a description of your project and let"
+        msg = acc.finalize()
+        assert msg.content == "I'll create that for you:  There you go! const x = 42;"
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

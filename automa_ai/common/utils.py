@@ -13,7 +13,6 @@ def load_memory_store_plugins():
     for ep in importlib.metadata.entry_points(
         group="automa_ai.memory_stores"
     ):
-        print(f"Discover memory store plugin: {ep.name}")
         store_cls = ep.load()
         MemoryStoreRegistry.register(ep.name, store_cls)
 

@@ -20,7 +20,8 @@ class ChromaVectorMemoryStore(BaseMemoryStore):
         }
         """
         db_path = config.get("db_path")
-        assert db_path, "db_path must be defined for ChromaVectorMemoryStore."
+        if not db_path:
+            raise ValueError("db_path must be defined for ChromaVectorMemoryStore.")
 
         return cls(
             persist_directory=db_path
@@ -59,7 +60,7 @@ class ChromaVectorMemoryStore(BaseMemoryStore):
             {
                 "session_id": entry.session_id,
                 "user_id": entry.user_id,
-                "memory_id": entry.id,
+                "memory_id": entry.record_id,
                 "memory_type": entry.memory_type.value,
                 "importance_score": entry.importance_score,
                 "timestamp": entry.timestamp.isoformat(),
