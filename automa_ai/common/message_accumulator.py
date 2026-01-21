@@ -42,12 +42,7 @@ class AIMessageAccumulator:
         self._carry = ""  # Handles marker split across chunks
 
     def add_chunk(self, chunk: AIMessageChunk) -> None:
-        """
-        Add a chunk to the accumulator.
-
-        Args:
-            chunk: An AIMessageChunk from LangChain streaming
-        """
+        """Add a chunk to the accumulator."""
         # ---- Accumulate metadata ----
         if chunk.additional_kwargs:
             self._merge_dict(self._additional_kwargs, chunk.additional_kwargs)
@@ -66,44 +61,43 @@ class AIMessageAccumulator:
         self._carry = ""
 
         while text:
-            if not self._in_artifact:
-                # Looking for artifact start marker
-                start_idx = text.find(ARTIFACT_START)
-                if start_idx == -1:
-                    # No marker found - check if we have a partial marker at the end
-                    partial_len = self._get_partial_marker_length(text, ARTIFACT_START)
-                    if partial_len > 0:
-                        # Save the partial marker for the next chunk
-                        self._assistant_parts.append(text[:-partial_len])
-                        self._carry = text[-partial_len:]
-                    else:
-                        # No partial marker, add all text
-                        self._assistant_parts.append(text)
-                    break
-                else:
-                    # Found start marker
-                    self._assistant_parts.append(text[:start_idx])
-                    text = text[start_idx + len(ARTIFACT_START):]
+            target_marker = ARTIFACT_START if not self._in_artifact else ARTIFACT_END
+            marker_idx = text.find(target_marker)
+
+            if marker_idx != -1:
+                # Found complete marker
+                if not self._in_artifact:
+                    self._assistant_parts.append(text[:marker_idx])
+                    text = text[marker_idx + len(ARTIFACT_START):]
                     self._in_artifact = True
-            else:
-                # Looking for artifact end marker
-                end_idx = text.find(ARTIFACT_END)
-                if end_idx == -1:
-                    # No marker found - check if we have a partial marker at the end
-                    partial_len = self._get_partial_marker_length(text, ARTIFACT_END)
-                    if partial_len > 0:
-                        # Save the partial marker for the next chunk
-                        self._artifact_parts.append(text[:-partial_len])
-                        self._carry = text[-partial_len:]
-                    else:
-                        # No partial marker, add all text
-                        self._artifact_parts.append(text)
-                    break
                 else:
-                    # Found end marker
-                    self._artifact_parts.append(text[:end_idx])
-                    text = text[end_idx + len(ARTIFACT_END):]
+                    self._artifact_parts.append(text[:marker_idx])
+                    text = text[marker_idx + len(ARTIFACT_END):]
                     self._in_artifact = False
+            else:
+                # No complete marker - check for partial
+                max_partial = min(len(text), len(target_marker) - 1)
+                partial_found = False
+
+                # Check from longest possible partial down to 1 char
+                for length in range(max_partial, 0, -1):
+                    if target_marker.startswith(text[-length:]):
+                        # Found a partial marker at the end
+                        if not self._in_artifact:
+                            self._assistant_parts.append(text[:-length])
+                        else:
+                            self._artifact_parts.append(text[:-length])
+                        self._carry = text[-length:]
+                        partial_found = True
+                        break
+
+                if not partial_found:
+                    # No partial marker, add everything
+                    if not self._in_artifact:
+                        self._assistant_parts.append(text)
+                    else:
+                        self._artifact_parts.append(text)
+                break
 
     def finalize(self) -> AIMessage:
         """
@@ -120,7 +114,13 @@ class AIMessageAccumulator:
                 self._assistant_parts.append(self._carry)
             self._carry = ""
 
-        combine_parts = "".join(self._assistant_parts) + "".join(self._artifact_parts)
+        assistant_part = "".join(self._assistant_parts).strip() or ""
+        artifact_part = "".join(self._artifact_parts).strip() or ""
+
+        if assistant_part and artifact_part:
+            assistant_part = assistant_part + " "
+
+        combine_parts = assistant_part + artifact_part
 
         # Build the final message
         message = AIMessage(
@@ -139,6 +139,17 @@ class AIMessageAccumulator:
         self._in_artifact = False
         self._carry = ""
         return message
+
+    def get_last_assistant_text(self) -> str | None:
+        """
+                Get the last assistant text.
+
+                Returns:
+                    The assistant text (stripped of whitespace), or None if no assistant
+                """
+        if not self._assistant_parts:
+            return None
+        return self._assistant_parts[-1]
 
     def get_assistant_text(self) -> str | None:
         """

@@ -1,8 +1,6 @@
 import asyncio
 import logging
-import os
 import sys
-import traceback
 from multiprocessing import Process
 from typing import Optional, List, Dict, Callable
 from urllib.parse import urlparse

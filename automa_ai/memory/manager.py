@@ -1,7 +1,8 @@
 """Memory module for managing conversation history and context retrieval"""
 import asyncio
+import logging
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
@@ -15,6 +16,8 @@ DEFAULT_SHORT_TERM_MAX = 30
 from dataclasses import dataclass
 from typing import Optional
 from langchain_core.messages import BaseMessage
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class MemoryWriteEvent:
@@ -43,7 +46,8 @@ class DefaultMemoryManager:
     def from_config(cls, config: dict) -> "DefaultMemoryManager":
         short_term_limit = config.get("short_term_limit") or DEFAULT_SHORT_TERM_LIMIT
         long_term_strategy = config.get("long_term_strategy") or DEFAULT_LONG_TERM_STRATEGY
-        assert long_term_strategy in ["messages", "summarize"], "Long term memory strategy must be one of messages, summarize"
+        if long_term_strategy not in ["messages", "summarize"]:
+            raise ValueError("long_term_strategy must be one of 'messages', 'summarize'")
 
         short_term_max = config.get("short_term_max") or DEFAULT_SHORT_TERM_MAX
         stores = config.get("stores") or []
@@ -55,8 +59,11 @@ class DefaultMemoryManager:
             memory_type = store.get("memory_type")
             store_name = store.get("name")
 
-            assert store_name, "Missing store name."
-            assert isinstance(memory_type, MemoryType), "Memory type must be one of the MemoryType"
+            if not store_name:
+                raise ValueError("Missing store name.")
+
+            if not isinstance(memory_type, MemoryType):
+                raise ValueError("Memory type must be one of the MemoryType")
 
             store_cls = MemoryStoreRegistry.get(store_name)
 
@@ -142,7 +149,7 @@ class DefaultMemoryManager:
                     await self.long_term_store.awrite_memory(to_move)
                     await self.short_term_store.adelete_memory(move_ids)
                 except Exception as e:
-                    print(f"FAILED to move memories to LTM: {e}")
+                    logger.error(f"FAILED to move memories to LTM: {e}")
 
             asyncio.create_task(safe_transfer())
 

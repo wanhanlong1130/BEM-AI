@@ -150,6 +150,7 @@ class GenericLangGraphChatAgent(BaseAgent):
     async def stream(self, query, session_id, task_id) -> AsyncIterable[dict[str, Any]]:
         # queue for tool/subagent streaming
         subagent_event_queue: asyncio.Queue[StreamEvent] = asyncio.Queue()
+        # queue for agent streaming
         output_queue: asyncio.Queue = asyncio.Queue()
 
         ### Subagent emit event
@@ -160,66 +161,13 @@ class GenericLangGraphChatAgent(BaseAgent):
             """
             await subagent_event_queue.put(e)
 
-        # Subagent drain event
-        async def subagent_event_forwarder():
-            while True:
-                try:
-                    e = await subagent_event_queue.get()
-                    # print("received event:", e)
-
-                    content_str = f"\n\n[{e.source}] "
-                    if e.metadata and e.metadata.get("final"):
-                        content_str += "(final) "
-                    content_str += e.content
-
-                    await output_queue.put({
-                        "response_type": "text",
-                        "is_task_complete": False,
-                        "require_user_input": False,
-                        "content": content_str,
-                    })
-                except Exception as e:
-                    print(f"Error forwarding subagent event: {e}")
-                    break
-
         # If selected to track metrics
         if self.metrics:
             if self.metrics.current_query_id and self.metrics.current_query_id != query:
                 # If a new task, write out the previous task.
                 print(self.metrics.summary_for_query(self.metrics.current_query_id))
             self.metrics.start_query(task_id)
-        # Optional RAG retrieval
-        context = ""
-        if self.retriever:
-            context = await self.retriever.asimilarity_search_by_vector(query)
-
-        # Build augmented user query
-        if context:
-            additional_system_query = f"""
-                You are given the following context from the knowledge base:
-                {context}
-            """
-            if self.debug:
-                print(additional_system_query)
-                logger.info(f"Retrieved query: {additional_system_query}")
-        else:
-            additional_system_query = ""
-
-        # retrieve memory
-        if self.memory_manager:
-            memory_list = await self.memory_manager.retrieve_memories(query, session_id=session_id, memory_types=[MemoryType.SHORT_TERM, MemoryType.LONG_TERM], include_short_term=True, include_long_term=True)
-            if memory_list:
-                formatted_memories = [f"{m.timestamp}: {m.content}" for m in memory_list]
-                additional_system_query = f"""
-                    {additional_system_query}
-                    
-                    You are also given the following context from the past conversations with the user:
-                    {formatted_memories}
-                    """
-
-        # Assemble message
-        inputs = {"messages": [{"role": "system", "content": additional_system_query}, {"role": "user", "content": query}]}
-        print("inputs to the llm: ", inputs)
+        inputs = await self._build_stream_inputs(query, session_id)
         config = {"configurable": {"thread_id": session_id}}
         logger.info(
             f"Running planner agent stream for session {session_id} {task_id} with input {query}"
@@ -240,7 +188,7 @@ class GenericLangGraphChatAgent(BaseAgent):
                         print("Getting the chunk", chunk)
                     ck, meta = chunk
 
-                    if isinstance(ck, HumanMessage):
+                    if isinstance(ck, HumanMessage) and self.memory_manager:
                         # Enqueue human message for memory
                         await self._memory_write_queue.put(MemoryWriteEvent(message=ck, session_id=session_id, user_id=task_id))
 
@@ -265,60 +213,23 @@ class GenericLangGraphChatAgent(BaseAgent):
                         )
 
                         if ck.content:
-                            content = ck.content
-                            response_metadata = ck.response_metadata
-
-                            if content and isinstance(content, list):
-                                # likely this is a gemini responses
-                                content = content[0]
-                                if response_metadata and response_metadata['model_provider'] in ["google_genai", "bedrock_converse"]:
-                                    # in this case, it is likely a json inside a list
-                                    if content["type"] == "text" and content["text"]:
-                                        content = content["text"]
-                                    elif content["type"] == "tool_use":
-                                        # seems unique to claude - temporary block tool call info first.
-                                        content = "-"
-
-                            if is_last_model_step:
-                                # in this case, the response is completed, so we return the final results
-                                final_text = message_accumulator.get_assistant_text()
-                                artifact_text = message_accumulator.get_artifact_text()
-
-                                # Flush the ai message chunks to ai message
-                                ai_message = message_accumulator.finalize()
-                                await self._memory_write_queue.put(MemoryWriteEvent(message=ai_message, session_id=session_id, user_id=task_id))
-                                if artifact_text:
-                                    try:
-                                        _, parsed = extract_and_parse_json(artifact_text)
-                                        if isinstance(parsed, dict):
-                                            await output_queue.put({
-                                                "response_type": "data",
-                                                "is_task_complete": True,
-                                                "require_user_input": False,
-                                                "content": parsed,
-                                            })
-                                    except Exception:
-                                        await output_queue.put({
-                                            "response_type": "text",
-                                            "is_task_complete": True,
-                                            "require_user_input": False,
-                                            "content": final_text,
-                                        })
+                            content = self._normalize_chunk_content(ck)
+                            if content is not None:
+                                if is_last_model_step:
+                                    await self._emit_final_output(
+                                        output_queue,
+                                        message_accumulator,
+                                        session_id,
+                                        task_id,
+                                    )
                                 else:
+                                    # not last step, continue streaming
                                     await output_queue.put({
                                         "response_type": "text",
-                                        "is_task_complete": True,
+                                        "is_task_complete": False,
                                         "require_user_input": False,
-                                        "content": final_text,
+                                        "content": message_accumulator.get_last_assistant_text(),
                                     })
-                            else:
-                                # not last step, continue streaming
-                                await output_queue.put( {
-                                    "response_type": "text",
-                                    "is_task_complete": False,
-                                    "require_user_input": False,
-                                    "content": content,
-                                })
 
                         elif ck.tool_calls:
                             active_tool_calls += len(ck.tool_calls)
@@ -335,39 +246,12 @@ class GenericLangGraphChatAgent(BaseAgent):
                             })
                         else:
                             if is_last_model_step:
-                                # in this case, the response is completed, so we return the final results
-                                final_text = message_accumulator.get_assistant_text()
-                                artifact_text = message_accumulator.get_artifact_text()
-
-                                # Flush the ai message chunks to ai message
-                                ai_message = message_accumulator.finalize()
-
-                                await self._memory_write_queue.put(MemoryWriteEvent(message=ai_message, session_id=session_id, user_id=task_id))
-
-                                if artifact_text:
-                                    try:
-                                        _, parsed = extract_and_parse_json(artifact_text)
-                                        if isinstance(parsed, dict):
-                                            await output_queue.put({
-                                                "response_type": "data",
-                                                "is_task_complete": True,
-                                                "require_user_input": False,
-                                                "content": parsed,
-                                            })
-                                    except Exception:
-                                        await output_queue.put({
-                                            "response_type": "text",
-                                            "is_task_complete": True,
-                                            "require_user_input": False,
-                                            "content": final_text,
-                                        })
-                                else:
-                                    await output_queue.put({
-                                        "response_type": "text",
-                                        "is_task_complete": True,
-                                        "require_user_input": False,
-                                        "content": final_text,
-                                    })
+                                await self._emit_final_output(
+                                    output_queue,
+                                    message_accumulator,
+                                    session_id,
+                                    task_id,
+                                )
                             # continue
                     elif isinstance(ck, ToolMessage):
                         active_tool_calls -= 1
@@ -391,10 +275,11 @@ class GenericLangGraphChatAgent(BaseAgent):
             finally:
                 await output_queue.put(None)
 
-        self._memory_writer_task = asyncio.create_task(self._start_memory_writer())
+        if self.memory_manager:
+            self._memory_writer_task = asyncio.create_task(self._start_memory_writer())
         # Start both forwarders
         forwarder_tasks = [
-            asyncio.create_task(subagent_event_forwarder()),
+            asyncio.create_task(self._forward_subagent_events(subagent_event_queue, output_queue)),
             asyncio.create_task(agent_chunk_forwarder()),
         ]
 
@@ -410,9 +295,10 @@ class GenericLangGraphChatAgent(BaseAgent):
             for task in forwarder_tasks:
                 task.cancel()
             # Signal memory writer shutdown and await completion
-            await self._memory_write_queue.put(None)
-            if self._memory_writer_task:
-                await self._memory_writer_task
+            if self.memory_manager:
+                await self._memory_write_queue.put(None)
+                if self._memory_writer_task:
+                    await self._memory_writer_task
 
     async def _start_memory_writer(self):
         """Background task that writes memory entries without blocking the forwarder."""
@@ -425,4 +311,128 @@ class GenericLangGraphChatAgent(BaseAgent):
                 await self.memory_manager.add_memory(event.message, session_id=event.session_id, user_id=event.user_id)
                 asyncio.create_task(self.memory_manager.manage_memory_size())
             except Exception as e:
-                print("Memory write failed:", e)
+                logger.exception("Memory manager failed")
+
+    async def _build_stream_inputs(self, query: str, session_id: str) -> dict[str, Any]:
+        context = ""
+        if self.retriever:
+            context = await self.retriever.asimilarity_search_by_vector(query)
+
+        if context:
+            additional_system_query = f"""
+                You are given the following context from the knowledge base:
+                {context}
+            """
+            if self.debug:
+                print(additional_system_query)
+                logger.info(f"Retrieved query: {additional_system_query}")
+        else:
+            additional_system_query = ""
+
+        if self.memory_manager:
+            memory_list = await self.memory_manager.retrieve_memories(
+                query,
+                session_id=session_id,
+                memory_types=[MemoryType.SHORT_TERM, MemoryType.LONG_TERM],
+                include_short_term=True,
+                include_long_term=True,
+            )
+            if memory_list:
+                formatted_memories = [f"{m.timestamp}: {m.content}" for m in memory_list]
+                additional_system_query = f"""
+                    {additional_system_query}
+
+                    You are also given the following context from the past conversations with the user:
+                    {formatted_memories}
+                    """
+
+        messages = [{"role": "user", "content": query}]
+        if additional_system_query.strip():
+            messages.insert(0, {"role": "system", "content": additional_system_query})
+        inputs = {"messages": messages}
+
+        logger.debug("Inputs to the LLM: %s", inputs)
+        return inputs
+
+    async def _forward_subagent_events(
+        self,
+        subagent_event_queue: asyncio.Queue[StreamEvent],
+        output_queue: asyncio.Queue,
+    ) -> None:
+        while True:
+            try:
+                e = await subagent_event_queue.get()
+                content_str = self._format_subagent_event(e)
+                await output_queue.put({
+                    "response_type": "text",
+                    "is_task_complete": False,
+                    "require_user_input": False,
+                    "content": content_str,
+                })
+            except Exception as e:
+                print(f"Error forwarding subagent event: {e}")
+                break
+
+    @staticmethod
+    def _format_subagent_event(event: StreamEvent) -> str:
+        #content_str = f"\n\n[{event.source}] "
+        content_str = ""
+        if event.metadata and event.metadata.get("final"):
+            content_str += "(final) "
+        content_str += event.content
+        return content_str
+
+    @staticmethod
+    def _normalize_chunk_content(chunk: AIMessageChunk) -> str | None:
+        content = chunk.content
+        if content and isinstance(content, list):
+            # likely this is a gemini responses
+            content = content[0]
+            if chunk.response_metadata and chunk.response_metadata.get("model_provider") in [
+                "google_genai",
+                "bedrock_converse",
+            ]:
+                # in this case, it is likely a json inside a list
+                if content["type"] == "text" and content["text"]:
+                    content = content["text"]
+                elif content["type"] == "tool_use":
+                    # seems unique to claude - temporary block tool call info first.
+                    content = "-"
+        return content
+
+    async def _emit_final_output(
+        self,
+        output_queue: asyncio.Queue,
+        message_accumulator: AIMessageAccumulator,
+        session_id: str,
+        task_id: str,
+    ) -> None:
+        final_text = message_accumulator.get_assistant_text()
+        artifact_text = message_accumulator.get_artifact_text()
+
+        ai_message = message_accumulator.finalize()
+        if self.memory_manager:
+            await self._memory_write_queue.put(
+                MemoryWriteEvent(message=ai_message, session_id=session_id, user_id=task_id)
+            )
+        if artifact_text:
+            try:
+                _, parsed = extract_and_parse_json(artifact_text)
+                if isinstance(parsed, dict):
+                    await output_queue.put({
+                        "response_type": "data",
+                        "is_task_complete": True,
+                        "require_user_input": False,
+                        "content": parsed,
+                    })
+                    return
+            except Exception:
+                # Intentionally pass.
+                pass
+
+        await output_queue.put({
+            "response_type": "text",
+            "is_task_complete": True,
+            "require_user_input": False,
+            "content": final_text,
+        })
