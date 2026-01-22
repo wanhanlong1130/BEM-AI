@@ -21,6 +21,8 @@ from automa_ai.memory.memory_types import MemoryType
 from automa_ai.metrics.collector import MetricsCollector
 from automa_ai.metrics.extractor import extract_metrics_from_chunk
 from automa_ai.prompt_engineering.prompt_template import RESPONSE_PROMPT
+from automa_ai.skills import SkillManager
+from automa_ai.skills.tools import build_load_skill_tool
 
 memory = MemorySaver()
 
@@ -39,6 +41,7 @@ class GenericLangGraphChatAgent(BaseAgent):
         mcp_servers: Dict[str, ServerConfig] | None = None,
         retriever: BaseRetriever | None = None,
         subagents: List[SubAgentSpec] | None = None,
+        skills_manager: SkillManager | None = None,
         memory_manager: DefaultMemoryManager = None,
         enable_metrics: bool = False,
         debug: bool = False
@@ -58,6 +61,7 @@ class GenericLangGraphChatAgent(BaseAgent):
         self.mcp_servers = mcp_servers
         self.retriever = retriever
         self.memory_manager = memory_manager
+        self.skill_manager = skills_manager
         self.metrics = None
         self.debug = debug
         if enable_metrics:
@@ -114,6 +118,16 @@ class GenericLangGraphChatAgent(BaseAgent):
             self.instructions = (
                 f"{self.instructions}\n\n"
                 f"{build_subagent_delegation_instruction(self.subagents)}"
+            )
+
+        if self.skill_manager and self.skill_manager.enabled:
+            if "load_skill" in used_tool_name:
+                raise ValueError("Duplicate tool name 'load_skill' detected.")
+            used_tool_name.append("load_skill")
+            tools.append(build_load_skill_tool(self.skill_manager))
+            self.instructions = (
+                f"{self.instructions}\n\n"
+                "You can load specialized skills using the load_skill tool."
             )
 
         # process the instructions

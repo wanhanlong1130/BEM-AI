@@ -22,6 +22,7 @@ from automa_ai.common.mcp_registry import MCPServerConfig
 from automa_ai.common.retriever import RetrieverConfig, ChromaRetriever
 from automa_ai.common.utils import map_mcp_config_to_server_config
 from automa_ai.memory.manager import DefaultMemoryManager
+from automa_ai.skills import SkillManager, SkillsConfig
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +130,7 @@ class AgentFactory:
         retriever_config: RetrieverConfig | None = None,
         subagent_config: List[SubAgentSpec] | None = None,
         memory_config: Dict | None = None,
+        skills_config: SkillsConfig | Dict | None = None,
         model_base_url: str | None = None,
         api_key: str | None = None,
         api_version: str | None = None,
@@ -145,6 +147,7 @@ class AgentFactory:
         self.retriever_config = retriever_config
         self.subagent_config = subagent_config
         self.memory_config = memory_config
+        self.skills_config = skills_config
         self.model_base_url = model_base_url
         self.api_key = api_key
         self.api_version = api_version
@@ -172,6 +175,14 @@ class AgentFactory:
         if self.memory_config:
             memory_manager = DefaultMemoryManager.from_config(self.memory_config)
 
+        skill_manager = None
+        if self.skills_config:
+            config = self.skills_config
+            if not isinstance(config, SkillsConfig):
+                config = SkillsConfig.from_dict(config)
+            if config.enabled:
+                skill_manager = SkillManager(config)
+
         if self.agent_type == GenericAgentType.ADK:
             return GenericADKAgent(
                 agent_name=self.card.name,
@@ -190,6 +201,7 @@ class AgentFactory:
                 mcp_servers=mcp_servers,
                 retriever=resolve_retriever(self.retriever_config) if self.retriever_config else None,
                 subagents=self.subagent_config if self.subagent_config else None,
+                skills_manager=skill_manager,
                 memory_manager=memory_manager,
                 enable_metrics = self.enable_metrics,
                 debug=self.debug
