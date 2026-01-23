@@ -54,10 +54,11 @@ class AIMessageAccumulator:
             self._tool_calls.extend(chunk.tool_calls)
 
         # ---- Route content ----
-        if not chunk.content:
+        content_text = self._content_to_text(getattr(chunk, "content", None))
+        if not content_text:
             return
 
-        text = self._carry + chunk.content
+        text = self._carry + content_text
         self._carry = ""
 
         while text:
@@ -211,3 +212,33 @@ class AIMessageAccumulator:
             if text.endswith(marker[:i]):
                 return i
         return 0
+
+    def _content_to_text(self, content: Any) -> str:
+        """Convert LangChain message content into a plain string."""
+        if content is None:
+            return ""
+
+        # Standard case: already a string
+        if isinstance(content, str):
+            return content
+
+        # Gemini / some providers: list of content parts (dicts)
+        if isinstance(content, list):
+            parts: list[str] = []
+            for item in content:
+                if isinstance(item, str):
+                    parts.append(item)
+                elif isinstance(item, dict):
+                    # Common pattern: {'type': 'text', 'text': '...'}
+                    if item.get("type") == "text" and "text" in item:
+                        parts.append(item["text"])
+                    # Some implementations may use other keys
+                    elif "text" in item and isinstance(item["text"], str):
+                        parts.append(item["text"])
+                    else:
+                        # ignore non-text blocks (or log if you prefer)
+                        pass
+            return "".join(parts)
+
+        # Anything else: best-effort string conversion
+        return str(content)

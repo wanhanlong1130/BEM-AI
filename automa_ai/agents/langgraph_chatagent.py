@@ -218,33 +218,28 @@ class GenericLangGraphChatAgent(BaseAgent):
                                 ))
                         # accumulate ai messages
                         message_accumulator.add_chunk(ck)
-
                         # is task completed?
-                        is_last_model_step = (
-                                ck.chunk_position
-                                and ck.chunk_position == "last"
-                                and active_tool_calls == 0
-                        )
+                        # is_last_model_step = self.is_last_chunk(ck, active_tool_calls)
+                        # print("Pass last step: ", is_last_model_step)
 
                         if ck.content:
                             content = self._normalize_chunk_content(ck)
                             if content is not None:
-                                if is_last_model_step:
-                                    await self._emit_final_output(
-                                        output_queue,
-                                        message_accumulator,
-                                        session_id,
-                                        task_id,
-                                    )
-                                else:
-                                    # not last step, continue streaming
-                                    await output_queue.put({
-                                        "response_type": "text",
-                                        "is_task_complete": False,
-                                        "require_user_input": False,
-                                        "content": message_accumulator.get_last_assistant_text(),
-                                    })
-
+                                #if is_last_model_step:
+                                #    await self._emit_final_output(
+                                #        output_queue,
+                                #        message_accumulator,
+                                #        session_id,
+                                #        task_id,
+                                #    )
+                                #else:
+                                # not last step, continue streaming
+                                await output_queue.put({
+                                    "response_type": "text",
+                                    "is_task_complete": False,
+                                    "require_user_input": False,
+                                    "content": message_accumulator.get_last_assistant_text(),
+                                })
                         elif ck.tool_calls:
                             active_tool_calls += len(ck.tool_calls)
                             tool_call_str = ""
@@ -258,14 +253,14 @@ class GenericLangGraphChatAgent(BaseAgent):
                                 "require_user_input": False,
                                 "content": tool_call_str,
                             })
-                        else:
-                            if is_last_model_step:
-                                await self._emit_final_output(
-                                    output_queue,
-                                    message_accumulator,
-                                    session_id,
-                                    task_id,
-                                )
+                        # else:
+                            # if is_last_model_step:
+                            #    await self._emit_final_output(
+                            #        output_queue,
+                            #        message_accumulator,
+                            #        session_id,
+                            #        task_id,
+                            #    )
                             # continue
                     elif isinstance(ck, ToolMessage):
                         active_tool_calls -= 1
@@ -286,6 +281,12 @@ class GenericLangGraphChatAgent(BaseAgent):
                                 "require_user_input": False,
                                 "content": f"Tool call {ck.name} has no content return or failed. check logs.",
                             })
+
+                await self._emit_final_output(
+                    output_queue,
+                    message_accumulator,
+                    session_id,
+                    task_id)
             finally:
                 await output_queue.put(None)
 

@@ -6,7 +6,7 @@ from automa_ai.skills.manager import SkillManager
 
 
 def build_load_skill_tool(skill_manager: SkillManager):
-    @tool("load_skill")
+    @tool(name_or_callable="load_skill", description="Load a skill prompt by name from the configured skill registry.")
     def load_skill(skill_name: str) -> str:
         """Load a skill prompt by name from the configured skill registry."""
         return skill_manager.load(skill_name)
