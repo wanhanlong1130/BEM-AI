@@ -76,3 +76,23 @@ See `examples/sim_chat_stream_demo/chatbot.py` for a concrete example that wires
 - **Add a new subagent**: build an `AgentCard`, wrap it in `SubAgentSpec`, and pass it to the main agent. Ensure the name is unique after normalization (`tool_name`).【F:automa_ai/agents/remote_agent.py†L29-L65】【F:automa_ai/agents/langgraph_chatagent.py†L93-L106】
 - **Add a new skill**: drop a `.md` or `.txt` file under an allowed root and register it in `skills_config` (or add a directory registry entry).【F:automa_ai/skills/README.md†L10-L35】
 - **Add a new memory store**: implement `BaseMemoryStore`, register with `MemoryStoreRegistry`, then update the `memory_config` for `DefaultMemoryManager`.【F:automa_ai/memory/memory_stores.py†L1-L59】【F:automa_ai/memory/manager.py†L46-L82】
+
+## Building and Testing
+
+The repository does not include a dedicated build step in this document, but you can run focused tests for the key subsystems below.
+
+- **Memory**: `pytest automa_ai/memory`. 
+- **Skills**: `pytest automa_ai/skills`. 
+- **Subagents**: `pytest examples/subagent_example`. 
+
+## Commit Messages and Pull Requests
+
+Follow the Chris Beams guidelines for commit messages: https://cbea.ms/git-commit/. 
+Every pull request should answer the following questions: what changed, why, and whether there are breaking changes. 
+All pull request comments should be complete sentences and end with a period. 
+
+## Review Checklist
+
+- All tests must succeed. 
+- Add new tests for any new feature or bug fix. 
+- Update documentation for user-facing changes. 
