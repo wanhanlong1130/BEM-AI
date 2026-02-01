@@ -14,7 +14,7 @@ from automa_ai.agents.remote_agent import SubAgentSpec, make_subagent_tool, buil
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.message_accumulator import AIMessageAccumulator
 from automa_ai.common.response_parser import extract_and_parse_json
-from automa_ai.common.retriever import BaseRetriever
+from automa_ai.common.retrieval.base import BaseRetriever
 from automa_ai.common.types import ServerConfig
 from automa_ai.memory.manager import DefaultMemoryManager, MemoryWriteEvent
 from automa_ai.memory.memory_types import MemoryType

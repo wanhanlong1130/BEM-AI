@@ -5,10 +5,12 @@ from pathlib import Path
 from a2a.types import AgentCard, AgentSkill, AgentCapabilities
 from dotenv import load_dotenv
 
-from automa_ai.agents import GenericAgentType, GenericLLM, GenericEmbedModel
+from automa_ai.agents import GenericAgentType, GenericLLM
 from automa_ai.agents.agent_factory import AgentFactory
 from automa_ai.common.agent_registry import A2AServerManager, A2AAgentServer
-from automa_ai.common.retriever import RetrieverConfig
+from automa_ai.common.retrieval import EmbeddingConfig, RetrieverProviderSpec
+from automa_ai.common.retrieval.registry import register_retriever_provider
+from examples.energycodes_chatbot.helpdesk_retriever import EnergyCodesHelpdeskRetrieverProvider
 
 base_dir = Path(__file__).resolve().parent
 env_path = base_dir / '.env'
@@ -88,13 +90,20 @@ public_agent_card = AgentCard(
 chat_bot_model_name = os.environ.get("CHAT_BOT_MODEL_NAME")
 chat_bot_base_url = os.environ.get("CHAT_BOT_MODEL_BASE_URL") or None
 
-retriever_config = RetrieverConfig(
-    db_path=str(Path(__file__).parent / "pipeline/chroma_persist"),
-    embeddings="mxbai-embed-large",
-    type=GenericEmbedModel.OLLAMA,
-    api_key=None,
+register_retriever_provider("helpdesk_chroma", EnergyCodesHelpdeskRetrieverProvider)
+
+retriever_spec = RetrieverProviderSpec(
+    provider="helpdesk_chroma",
     top_k=3,
-    collection_name="helpdesk_qna",
+    embedding=EmbeddingConfig(
+        provider="ollama",
+        model="mxbai-embed-large",
+        base_url=None,
+    ),
+    retrieval_provider_config={
+        "db_path": str(Path(__file__).parent / "pipeline/chroma_persist"),
+        "collection_name": "helpdesk_qna",
+    },
 )
 
 # Initialize chatbot agent
@@ -106,7 +115,7 @@ chatbot = AgentFactory(
     chat_model=GenericLLM.OLLAMA,
     model_base_url=chat_bot_base_url,
     # mcp_configs={"retriever":retriever_mcp_config},
-    retriever_config=retriever_config,
+    retriever_spec=retriever_spec,
     enable_metrics=True,
     debug=True
 )

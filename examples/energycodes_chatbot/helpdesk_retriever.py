@@ -1,50 +1,94 @@
+from dataclasses import dataclass
 from typing import Any
 
-from langchain_ollama import OllamaEmbeddings
+from langchain_chroma import Chroma
 
-from automa_ai.common.retriever import ChromaRetriever
+from automa_ai.common.retrieval.base import BaseRetriever
+from automa_ai.common.retrieval.config import RetrieverProviderSpec
+from automa_ai.common.retrieval.embedding_factory import resolve_embeddings
 
-class EnergyCodesHelpdeskRetriever(ChromaRetriever):
-    def __init__(self, db_path="/Users/xuwe123/github/BEM-AI/examples/energycodes_chatbot/pipeline/chroma_persist", collection_name="helpdesk_qna", k=4):
-        embeddings = OllamaEmbeddings(model="mxbai-embed-large")
-        super().__init__(
-            db_path=db_path,
-            collection_name=collection_name,
-            embeddings=embeddings,
-            k=k
-        )
 
-    def similarity_search_by_vector(self, query: str) -> list[Any]:
-        if self.embeddings:
-            query_embedding = self.embeddings.embed_query(query)
-        else:
-            # Use the chromaDB default embeddings
-            query_embedding = query
-        # Chroma is sync, so we run in thread to avoid blocking
-        results = self.store.similarity_search_by_vector_with_relevance_scores(query_embedding, k=self.k)
-        formatted = []
-        for doc, score in results:
-            metadata = doc.metadata
-            page_content = doc.page_content
-            formatted.append({
-                "question": page_content,
-                "answer": metadata["answer"],
-                "score": 1 - score
-            })
+@dataclass
+class EnergyCodesHelpdeskRetriever(BaseRetriever):
+    store: Chroma
+    top_k: int = 4
+    embeddings: Any | None = None
 
+    def _format_documents(self, docs: list[Any], scores: list[float] | None = None) -> list[dict[str, Any]]:
+        formatted: list[dict[str, Any]] = []
+        for idx, doc in enumerate(docs):
+            entry: dict[str, Any] = {
+                "relevant_context": doc.page_content,
+                "metadata": doc.metadata,
+            }
+            if scores is not None:
+                entry["score"] = scores[idx]
+            formatted.append(entry)
         return formatted
 
-if __name__ == "__main__":
-   embedder = OllamaEmbeddings(model="mxbai-embed-large")
-   retriever = EnergyCodesHelpdeskRetriever()
-   doc = retriever.similarity_search_by_vector("How do I set wall orientation in COMcheck?")
-   print(doc)
+    def similarity_search(
+        self,
+        query: str,
+        *,
+        top_k: int | None = None,
+        **kwargs: Any,
+    ) -> list[Any]:
+        k = top_k or self.top_k
+        if hasattr(self.store, "similarity_search_with_relevance_scores"):
+            results = self.store.similarity_search_with_relevance_scores(query, k=k, **kwargs)
+            docs = [doc for doc, _score in results]
+            scores = [score for _doc, score in results]
+            return self._format_documents(docs, scores)
+        if hasattr(self.store, "similarity_search"):
+            docs = self.store.similarity_search(query, k=k, **kwargs)
+            return self._format_documents(docs)
+        if self.embeddings:
+            vector = self.embeddings.embed_query(query)
+            return self.similarity_search_by_vector(vector, top_k=k, **kwargs)
+        raise ValueError("Chroma store does not support text similarity search.")
 
-   ollama_retriever = ChromaRetriever(
-       db_path="/Users/xuwe123/github/BEM-AI/examples/energycodes_chatbot/pipeline/chroma_persist",
-       collection_name="helpdesk_qna",
-       k=3,
-       embeddings=embedder
-   )
-   docs = ollama_retriever.similarity_search_by_vector("How do I set wall orientation in COMcheck?")
-   print(docs)
+    def similarity_search_by_vector(
+        self,
+        vector: list[float],
+        *,
+        top_k: int | None = None,
+        **kwargs: Any,
+    ) -> list[Any]:
+        k = top_k or self.top_k
+        if hasattr(self.store, "similarity_search_by_vector_with_relevance_scores"):
+            results = self.store.similarity_search_by_vector_with_relevance_scores(vector, k=k, **kwargs)
+            docs = [doc for doc, _score in results]
+            scores = [score for _doc, score in results]
+            return self._format_documents(docs, scores)
+        if hasattr(self.store, "similarity_search_by_vector"):
+            docs = self.store.similarity_search_by_vector(vector, k=k, **kwargs)
+            return self._format_documents(docs)
+        raise ValueError("Chroma store does not support vector similarity search.")
+
+
+class EnergyCodesHelpdeskRetrieverProvider:
+    @classmethod
+    def from_config(cls, spec: RetrieverProviderSpec) -> BaseRetriever:
+        config = dict(spec.retrieval_provider_config or {})
+        db_path = config.pop("db_path", None)
+        persist_directory = config.pop("persist_directory", None)
+        collection_name = config.pop("collection_name", None) or "helpdesk_qna"
+        chroma_kwargs = config.pop("chroma_kwargs", None)
+
+        persist_directory = persist_directory or db_path
+        if not persist_directory:
+            raise ValueError("Helpdesk retriever requires 'db_path' or 'persist_directory'.")
+
+        embeddings = resolve_embeddings(spec.embedding) if spec.embedding else None
+        init_kwargs: dict[str, Any] = {
+            "persist_directory": persist_directory,
+            "collection_name": collection_name,
+            "embedding_function": embeddings,
+        }
+        if chroma_kwargs:
+            init_kwargs.update(chroma_kwargs)
+        if config:
+            init_kwargs.update(config)
+
+        store = Chroma(**init_kwargs)
+        return EnergyCodesHelpdeskRetriever(store=store, top_k=spec.top_k, embeddings=embeddings)
