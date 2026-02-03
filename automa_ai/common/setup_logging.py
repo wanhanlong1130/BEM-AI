@@ -208,6 +208,9 @@ def _get_logging_config(log_dir: str = "logs") -> LoggingConfigDict:
             "queue_listener": {
                 "class": "logging.handlers.QueueHandler",
                 "listener": "automa_ai.common.setup_logging.AutoStartQueueListener",
+                "queue": {
+                    "()": "multiprocessing.Queue"
+                },
                 "level": "INFO",
                 "handlers": [
                     "mcp_client_file",
@@ -252,6 +255,13 @@ def _get_logging_config(log_dir: str = "logs") -> LoggingConfigDict:
             "automa_ai": {
                 "handlers": ["catch_all_file"],
                 "level": "INFO",
+                "propagate": False,
+            },
+            # Silence multiprocessing's internal logger to avoid QueueHandler recursion
+            # from using a multiprocessing.Queue for logging.
+            "multiprocessing": {
+                "level": "WARNING",
+                "handlers": [],
                 "propagate": False,
             },
         },
