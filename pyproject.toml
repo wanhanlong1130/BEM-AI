@@ -35,7 +35,6 @@ dependencies = [
     "pyjwt>=2.10.1",
     "streamlit>=1.51.0",
     "uvicorn>=0.38.0",
-    "multiprocessing-logging>=0.3.4"
 ]
 packages = [{include = "automa_ai", from = "."}]
 
