@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 import sys
 from multiprocessing import Process
 from typing import Optional, List, Dict, Callable
@@ -22,6 +21,10 @@ logger = logging.getLogger(__name__)
 
 def _child_entrypoint(run_fn, logging_config):
     _init_child_logging(logging_config)
+
+    # Load plugins BEFORE any agent is created
+    from automa_ai.common.utils import load_memory_store_plugins
+    load_memory_store_plugins()
     run_fn()
 
 class A2AAgentServer:
@@ -85,7 +88,7 @@ class A2AServerManager:
             # Create and start process
             process = Process(
                 target=_child_entrypoint,
-                args=(server.run, self.logging_config)
+                args=(server.run, self.logging_config),
             )
             process.start()
 

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from pathlib import Path
 
@@ -9,24 +10,51 @@ from automa_ai.agents import GenericAgentType, GenericLLM
 from automa_ai.agents.agent_factory import AgentFactory
 from automa_ai.common.agent_registry import A2AServerManager, A2AAgentServer
 from automa_ai.common.mcp_registry import MCPServerConfig, MCPServerManager
+from automa_ai.memory.memory_types import MemoryType
 from examples.sim_chat_stream_demo.mcp_server.mcp_server import serve
 
 base_dir = Path(__file__).resolve().parent
 env_path = base_dir / '.env'
 load_dotenv(dotenv_path=env_path)
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+## Register memory plugin
+from automa_ai.memory.manager import MemoryStoreRegistry
+from automa_ai.memory.sqlite_memory_store import SQLiteMemoryStore
+from automa_ai.memory.chroma_memory_store import ChromaVectorMemoryStore
+
+MemoryStoreRegistry.register("default_sqlite", SQLiteMemoryStore)
+MemoryStoreRegistry.register("default_chroma", ChromaVectorMemoryStore)
+
+# MCP server
 weather_mcp_config = MCPServerConfig(
     name="weather_mcp",
     host="localhost",
     port=10000,
     serve=serve,
-    transport="sse"
+    transport="streamable-http"
 )
+
+# skill configuration
+skill_config = {
+    "enabled": True,
+    "allowed_roots": [f"{base_dir}/skills"],
+    "registry": {
+        "predict_weather": {
+            "path": f"{base_dir}/skills/predict_weather.md",
+            "format": "markdown",
+        },
+    },
+}
 
 
 CHAT_COT = """
 You are AUTOMA-AI, a dynamic multi-agent network system built on Google's A2A and Anthropic's MCP protocols, combining the power of LangChain, Google GenAI, and modern agent orchestration for engineering task orchestration.
 Your task is to provide helpful information for users to use AUTOMA-AI.
+
+If asked about weather, you should load the predict_weather skill and follow the instruction to respond user query.
 
 Always use the CHAIN-OF-THOUGHT PROCESS before answering user questions.
 
@@ -174,7 +202,8 @@ chatbot = AgentFactory(
     agent_type=GenericAgentType.LANGGRAPHCHAT,
     chat_model=GenericLLM.OLLAMA,
     model_base_url=chat_bot_base_url,
-    mcp_configs={"weather_mcp": weather_mcp_config},
+    # mcp_configs={"weather_mcp": weather_mcp_config},
+    skills_config=skill_config,
     enable_metrics=True,
     debug=True
 )

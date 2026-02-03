@@ -20,7 +20,7 @@ class MCPServerConfig:
     host: str
     port: int
     serve: callable
-    transport: Literal["std", "sse", "http"]
+    transport: Literal["stdio", "sse", "streamable-http"]
     agent_cards_dir: str = "/automa_ai"
 
 
