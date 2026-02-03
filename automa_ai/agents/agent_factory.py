@@ -7,11 +7,11 @@ from google.adk.models.lite_llm import LiteLlm
 from langchain_anthropic import ChatAnthropic
 from langchain_aws import ChatBedrockConverse
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings, AzureChatOpenAI
+from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from pydantic import BaseModel, SecretStr
 
-from automa_ai.agents import GenericAgentType, GenericLLM, GenericEmbedModel
+from automa_ai.agents import GenericAgentType, GenericLLM
 from automa_ai.agents.adk_agent import GenericADKAgent
 from automa_ai.agents.langgraph_chatagent import GenericLangGraphChatAgent
 from automa_ai.agents.orchestrator_network_agent import OrchestratorNetworkAgent
@@ -19,7 +19,7 @@ from automa_ai.agents.react_langgraph_agent import GenericLangGraphReactAgent
 from automa_ai.agents.remote_agent import SubAgentSpec
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.mcp_registry import MCPServerConfig
-from automa_ai.common.retriever import RetrieverConfig, ChromaRetriever
+from automa_ai.retrieval import RetrieverProviderSpec, resolve_retriever
 from automa_ai.common.utils import map_mcp_config_to_server_config
 from automa_ai.memory.manager import DefaultMemoryManager
 from automa_ai.skills import SkillManager, SkillsConfig
@@ -76,29 +76,6 @@ def resolve_chat_model(backend: GenericLLM, model_name: str, agent_type: Generic
     else:
          raise ValueError(f"Unsupported model backend: {backend}")
 
-def resolve_retriever_model(backend: GenericEmbedModel, model_name: str, base_url: str | None = None, api_key: str | None = None):
-    if backend == GenericEmbedModel.OLLAMA:
-        print(model_name)
-        return OllamaEmbeddings(model=model_name, base_url=base_url)
-    elif backend == GenericEmbedModel.OPENAI:
-        return OpenAIEmbeddings(model=model_name, base_url=base_url, api_key=api_key)
-    else:
-        raise ValueError(f"Unsupported model backend: {backend}")
-
-def resolve_retriever(config: RetrieverConfig):
-    backend_model = config.type
-    if backend_model == GenericEmbedModel.OLLAMA:
-        model_name = config.embeddings
-        api_key = config.api_key
-        ollama_embeddings = resolve_retriever_model(backend_model, model_name)
-
-        db_path = config.db_path
-        collection_name = config.collection_name
-        top_k = config.top_k
-        return ChromaRetriever(db_path=db_path, collection_name=collection_name, k=top_k, embeddings=ollama_embeddings)
-    else:
-        raise ValueError(f"Unsupported model backend: {backend_model}")
-
 
 class AgentFactory:
     """
@@ -114,7 +91,7 @@ class AgentFactory:
                 Examples: {
                             "sample_mcp_1": MCPServerConfig(name="sample_mcp", host="localhost", port=10000, transport="sse"),
                             }
-        retriever: Callable | None = None Default None, knowledge base retrieval function.
+        retriever: BaseRetriever | dict | None = None Default None, knowledge base retrieval function.
         enable_metrics: bool determine whether metrics tracking per task / query should be enabled or not.
         debug: bool determine whether debug mode should be enabled or not.
     """
@@ -127,7 +104,7 @@ class AgentFactory:
         chat_model: GenericLLM,
         response_format: type[BaseModel] | None = None,
         mcp_configs: Dict[str, MCPServerConfig] | None = None,
-        retriever_config: RetrieverConfig | None = None,
+        retriever_spec: RetrieverProviderSpec | dict | None = None,
         subagent_config: List[SubAgentSpec] | None = None,
         memory_config: Dict | None = None,
         skills_config: SkillsConfig | Dict | None = None,
@@ -144,7 +121,7 @@ class AgentFactory:
         self.chat_model = chat_model
         self.response_format = response_format
         self.mcp_configs = mcp_configs
-        self.retriever_config = retriever_config
+        self.retriever_spec = retriever_spec
         self.subagent_config = subagent_config
         self.memory_config = memory_config
         self.skills_config = skills_config
@@ -199,7 +176,7 @@ class AgentFactory:
                 response_format=self.response_format,
                 chat_model=chat_model,
                 mcp_servers=mcp_servers,
-                retriever=resolve_retriever(self.retriever_config) if self.retriever_config else None,
+                retriever=resolve_retriever(self.retriever_spec) if self.retriever_spec else None,
                 subagents=self.subagent_config if self.subagent_config else None,
                 skills_manager=skill_manager,
                 memory_manager=memory_manager,

@@ -37,10 +37,24 @@ weather_mcp_config = MCPServerConfig(
     transport="streamable-http"
 )
 
+# skill configuration
+skill_config = {
+    "enabled": True,
+    "allowed_roots": [f"{base_dir}/skills"],
+    "registry": {
+        "predict_weather": {
+            "path": f"{base_dir}/skills/predict_weather.md",
+            "format": "markdown",
+        },
+    },
+}
+
 
 CHAT_COT = """
 You are AUTOMA-AI, a dynamic multi-agent network system built on Google's A2A and Anthropic's MCP protocols, combining the power of LangChain, Google GenAI, and modern agent orchestration for engineering task orchestration.
 Your task is to provide helpful information for users to use AUTOMA-AI.
+
+If asked about weather, you should load the predict_weather skill and follow the instruction to respond user query.
 
 Always use the CHAIN-OF-THOUGHT PROCESS before answering user questions.
 
@@ -189,27 +203,7 @@ chatbot = AgentFactory(
     chat_model=GenericLLM.OLLAMA,
     model_base_url=chat_bot_base_url,
     # mcp_configs={"weather_mcp": weather_mcp_config},
-    memory_config={
-        "short_term_limit": 10,
-        "short_term_max": 20,
-        "long_term_strategy": "summarize",
-        "stores": [
-            {
-                "name": "default_sqlite",
-                "memory_type": MemoryType.SHORT_TERM,
-                "store_config": {
-                    "db_path": "/Users/xuwe123/github/BEM-AI/examples/sim_chat_stream_demo/memory.db"
-                }
-            },
-            {
-                "name": "default_chroma",
-                "memory_type": MemoryType.LONG_TERM,
-                "store_config": {
-                    "db_path": "/Users/xuwe123/github/BEM-AI/examples/sim_chat_stream_demo/long_term"
-                }
-            }
-        ]
-    },
+    skills_config=skill_config,
     enable_metrics=True,
     debug=True
 )
