@@ -3,8 +3,8 @@ from pathlib import Path
 
 from langchain_ollama import ChatOllama
 
-from automa_ai.common.retrieval import EmbeddingConfig, RetrieverProviderSpec, resolve_retriever
-from automa_ai.common.retrieval.registry import register_retriever_provider
+from automa_ai.retrieval import EmbeddingConfig, RetrieverProviderSpec, resolve_retriever
+from automa_ai.retrieval.registry import register_retriever_provider
 from examples.energycodes_chatbot.helpdesk_retriever import EnergyCodesHelpdeskRetrieverProvider
 from automa_ai.agents.langgraph_chatagent import GenericLangGraphChatAgent
 from automa_ai.metrics.eval_pipeline import run_deepeval

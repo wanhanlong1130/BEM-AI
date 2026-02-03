@@ -1,20 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
 import pytest
 
-from automa_ai.common.retrieval.base import BaseRetriever
-from automa_ai.common.retrieval.config import RetrieverProviderSpec
-from automa_ai.common.retrieval.registry import register_retriever_provider
-from automa_ai.common.retrieval.resolve import resolve_retriever
-
-
-@dataclass
-class DummyDoc:
-    page_content: str
-    metadata: dict[str, Any]
+from automa_ai.retrieval.base import BaseRetriever
+from automa_ai.retrieval.config import RetrieverProviderSpec
+from automa_ai.retrieval.registry import register_retriever_provider
+from automa_ai.retrieval.resolve import resolve_retriever
 
 
 class DummyRetriever(BaseRetriever):

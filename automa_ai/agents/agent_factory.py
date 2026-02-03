@@ -19,7 +19,7 @@ from automa_ai.agents.react_langgraph_agent import GenericLangGraphReactAgent
 from automa_ai.agents.remote_agent import SubAgentSpec
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.mcp_registry import MCPServerConfig
-from automa_ai.common.retrieval import RetrieverProviderSpec, resolve_retriever
+from automa_ai.retrieval import RetrieverProviderSpec, resolve_retriever
 from automa_ai.common.utils import map_mcp_config_to_server_config
 from automa_ai.memory.manager import DefaultMemoryManager
 from automa_ai.skills import SkillManager, SkillsConfig
@@ -91,7 +91,7 @@ class AgentFactory:
                 Examples: {
                             "sample_mcp_1": MCPServerConfig(name="sample_mcp", host="localhost", port=10000, transport="sse"),
                             }
-        retriever: BaseRetriever | None = None Default None, knowledge base retrieval function.
+        retriever: BaseRetriever | dict | None = None Default None, knowledge base retrieval function.
         enable_metrics: bool determine whether metrics tracking per task / query should be enabled or not.
         debug: bool determine whether debug mode should be enabled or not.
     """

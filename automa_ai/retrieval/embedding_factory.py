@@ -6,7 +6,7 @@ from typing import Any
 from langchain_ollama import OllamaEmbeddings
 from langchain_openai import OpenAIEmbeddings
 
-from automa_ai.common.retrieval.config import EmbeddingConfig
+from automa_ai.retrieval.config import EmbeddingConfig
 
 
 def resolve_embeddings(cfg: EmbeddingConfig) -> Any:

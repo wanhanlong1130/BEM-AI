@@ -4,9 +4,9 @@ from __future__ import annotations
 from importlib import import_module
 from typing import Any
 
-from automa_ai.common.retrieval.base import BaseRetriever
-from automa_ai.common.retrieval.config import RetrieverProviderSpec
-from automa_ai.common.retrieval.registry import get_retriever_provider
+from automa_ai.retrieval.base import BaseRetriever
+from automa_ai.retrieval.config import RetrieverProviderSpec
+from automa_ai.retrieval.registry import get_retriever_provider
 
 
 def _import_from_path(path: str) -> Any:
@@ -50,5 +50,3 @@ def resolve_retriever(spec: RetrieverProviderSpec | dict | None) -> BaseRetrieve
                 "Register it with register_retriever_provider or provide 'impl'."
             )
         return provider_cls.from_config(spec)
-
-    raise ValueError("Retriever spec must include either 'provider' or 'impl'.")

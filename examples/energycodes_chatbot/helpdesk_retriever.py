@@ -3,9 +3,9 @@ from typing import Any
 
 from langchain_chroma import Chroma
 
-from automa_ai.common.retrieval.base import BaseRetriever
-from automa_ai.common.retrieval.config import RetrieverProviderSpec
-from automa_ai.common.retrieval.embedding_factory import resolve_embeddings
+from automa_ai.retrieval.base import BaseRetriever
+from automa_ai.retrieval.config import RetrieverProviderSpec
+from automa_ai.retrieval.embedding_factory import resolve_embeddings
 
 
 @dataclass

@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 from automa_ai.agents import GenericAgentType, GenericLLM
 from automa_ai.agents.agent_factory import AgentFactory
 from automa_ai.common.agent_registry import A2AServerManager, A2AAgentServer
-from automa_ai.common.retrieval import EmbeddingConfig, RetrieverProviderSpec
-from automa_ai.common.retrieval.registry import register_retriever_provider
+from automa_ai.retrieval import EmbeddingConfig, RetrieverProviderSpec
+from automa_ai.retrieval.registry import register_retriever_provider
 from examples.energycodes_chatbot.helpdesk_retriever import EnergyCodesHelpdeskRetrieverProvider
 
 base_dir = Path(__file__).resolve().parent

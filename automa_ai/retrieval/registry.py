@@ -1,11 +1,9 @@
 """Registry for retriever providers."""
 from __future__ import annotations
 
-from typing import Dict
+from automa_ai.retrieval.providers.base import RetrieverProvider
 
-from automa_ai.common.retrieval.providers.base import RetrieverProvider
-
-_RETRIEVER_PROVIDERS: Dict[str, type[RetrieverProvider]] = {}
+_RETRIEVER_PROVIDERS: dict[str, type[RetrieverProvider]] = {}
 
 
 def register_retriever_provider(name: str, cls: type[RetrieverProvider]) -> None:

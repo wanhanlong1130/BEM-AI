@@ -14,7 +14,7 @@ from automa_ai.agents.remote_agent import SubAgentSpec, make_subagent_tool, buil
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.message_accumulator import AIMessageAccumulator
 from automa_ai.common.response_parser import extract_and_parse_json
-from automa_ai.common.retrieval.base import BaseRetriever
+from automa_ai.retrieval.base import BaseRetriever
 from automa_ai.common.types import ServerConfig
 from automa_ai.memory.manager import DefaultMemoryManager, MemoryWriteEvent
 from automa_ai.memory.memory_types import MemoryType
@@ -331,7 +331,7 @@ class GenericLangGraphChatAgent(BaseAgent):
     async def _build_stream_inputs(self, query: str, session_id: str) -> dict[str, Any]:
         context = ""
         if self.retriever:
-            context = await self.retriever.asimilarity_search_by_vector(query)
+            context = await self.retriever.asimilarity_search(query)
 
         if context:
             additional_system_query = f"""
