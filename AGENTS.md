@@ -1,12 +1,50 @@
 # BEM-AI Agent Guide
 
-This document provides an AI-focused orientation to BEM-AI’s agent architecture, with emphasis on subagents (`remote_agent`), skills, and memory. It is meant to help an LLM understand how the runtime is wired and where to look when extending or debugging behavior.
+This document provides an AI-focused orientation to BEM-AI’s agent architecture, with emphasis on retrieval, subagents (`remote_agent`), skills, and memory. It is meant to help an LLM understand how the runtime is wired and where to look when extending or debugging behavior.
 
 ## Repository mental model
 
 - **Core agent runtime** lives in `automa_ai/agents` (LangGraph-based chat agent, A2A subagents, agent factory).【F:automa_ai/agents/langgraph_chatagent.py†L1-L132】【F:automa_ai/agents/remote_agent.py†L1-L244】
+- **Retrieval** is handled by `automa_ai/retrieval` (retriever interface, provider registry/resolver, embedding factory) and is wired into chat agents through `AgentFactory`.【F:automa_ai/retrieval/base.py†L1-L59】【F:automa_ai/retrieval/resolve.py†L1-L52】【F:automa_ai/agents/agent_factory.py†L137-L185】
 - **Skills** are filesystem prompt snippets managed by `automa_ai/skills` and loaded at runtime via a tool call (`load_skill`).【F:automa_ai/skills/README.md†L1-L52】【F:automa_ai/skills/manager.py†L23-L239】
 - **Memory** is handled by `automa_ai/memory`, with a configurable manager, store interfaces, and concrete stores (SQLite + Chroma vector store).【F:automa_ai/memory/manager.py†L1-L218】【F:automa_ai/memory/memory_stores.py†L1-L59】【F:automa_ai/memory/sqlite_memory_store.py†L1-L141】
+
+## Retrieval
+
+BEM-AI retrieval uses a provider abstraction resolved at agent construction time.
+
+### Retrieval contracts and resolution
+
+- `BaseRetriever` defines sync text/vector search plus async wrappers (`asimilarity_search*`) that default to `asyncio.to_thread(...)`.【F:automa_ai/retrieval/base.py†L8-L59】
+- `RetrieverProviderSpec` requires exactly one of `provider` or `impl` when enabled; `enabled=False` short-circuits retrieval entirely.【F:automa_ai/retrieval/config.py†L21-L37】
+- `resolve_retriever(...)` supports:
+  - **registry path** (`provider`) via `register_retriever_provider`, or
+  - **direct import path** (`impl`) in `module:ClassName` format.
+  In both cases, the resolved class must expose `from_config(spec)`.【F:automa_ai/retrieval/registry.py†L1-L14】【F:automa_ai/retrieval/resolve.py†L12-L52】
+- Embeddings are resolved separately via `resolve_embeddings(...)`; currently supported providers are `ollama` and `openai`.【F:automa_ai/retrieval/embedding_factory.py†L12-L44】
+
+### Runtime integration in chat agents
+
+- `AgentFactory` resolves `retriever_spec` and injects the resulting retriever into `GenericLangGraphChatAgent`.【F:automa_ai/agents/agent_factory.py†L171-L185】
+- During request handling, `GenericLangGraphChatAgent._build_stream_inputs(...)`:
+  1. calls `retriever.asimilarity_search(query)` when configured,
+  2. serializes returned context into an additional system prompt block,
+  3. prepends that system message before the user message.【F:automa_ai/agents/langgraph_chatagent.py†L331-L367】
+
+### Energy Codes example (`examples/energycodes_chatbot`)
+
+- `helpdesk_retriever.py` implements a Chroma-backed retriever + provider:
+  - provider key: `helpdesk_chroma`,
+  - requires `db_path` or `persist_directory`,
+  - optional `collection_name` (default `helpdesk_qna`) and `chroma_kwargs`,
+  - optional embeddings via `spec.embedding`,
+  - normalizes output as `{"relevant_context", "metadata", "score?"}` records.【F:examples/energycodes_chatbot/helpdesk_retriever.py†L11-L94】
+- `energycode_bot.py` registers the provider, builds `RetrieverProviderSpec`, and passes it to `AgentFactory`:
+  - top-k retrieval set to `3`,
+  - embedding provider is `ollama` with model `mxbai-embed-large`,
+  - persisted Chroma location: `examples/energycodes_chatbot/pipeline/chroma_persist`,
+  - collection: `helpdesk_qna`.【F:examples/energycodes_chatbot/energycode_bot.py†L93-L119】
+- Practical requirement: provider registration (`register_retriever_provider`) must happen before `AgentFactory(...)` resolves `retriever_spec`, otherwise provider lookup fails.【F:automa_ai/retrieval/resolve.py†L45-L51】【F:examples/energycodes_chatbot/energycode_bot.py†L93-L110】
 
 ## Subagents (`remote_agent`)
 
@@ -74,6 +112,7 @@ See `examples/sim_chat_stream_demo/chatbot.py` for a concrete example that wires
 ## Extension tips
 
 - **Add a new subagent**: build an `AgentCard`, wrap it in `SubAgentSpec`, and pass it to the main agent. Ensure the name is unique after normalization (`tool_name`).【F:automa_ai/agents/remote_agent.py†L29-L65】【F:automa_ai/agents/langgraph_chatagent.py†L93-L106】
+- **Add a new retriever provider**: implement a provider with `from_config(spec) -> BaseRetriever`, register it with `register_retriever_provider`, and pass a `RetrieverProviderSpec` into `AgentFactory(retriever_spec=...)`.【F:automa_ai/retrieval/providers/base.py†L1-L13】【F:automa_ai/retrieval/registry.py†L1-L14】【F:automa_ai/agents/agent_factory.py†L107-L185】
 - **Add a new skill**: drop a `.md` or `.txt` file under an allowed root and register it in `skills_config` (or add a directory registry entry).【F:automa_ai/skills/README.md†L10-L35】
 - **Add a new memory store**: implement `BaseMemoryStore`, register with `MemoryStoreRegistry`, then update the `memory_config` for `DefaultMemoryManager`.【F:automa_ai/memory/memory_stores.py†L1-L59】【F:automa_ai/memory/manager.py†L46-L82】
 
@@ -82,6 +121,7 @@ See `examples/sim_chat_stream_demo/chatbot.py` for a concrete example that wires
 The repository does not include a dedicated build step in this document, but you can run focused tests for the key subsystems below.
 
 - **Memory**: `pytest automa_ai/memory`. 
+- **Retrieval**: `pytest tests/test_retrieval_resolve.py`.
 - **Skills**: `pytest automa_ai/skills`. 
 - **Subagents**: `pytest examples/subagent_example`. 
 
