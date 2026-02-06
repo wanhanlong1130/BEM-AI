@@ -67,7 +67,6 @@ class A2AAgentServer:
         self.base_url_path = _normalize_base_path(
             base_url_path if base_url_path is not None else parsed_url.path
         )
-        print(base_url_path)
         self.log_dir = log_dir
         self.server: Optional[uvicorn.Server] = None
         self.shutdown_event = asyncio.Event()
