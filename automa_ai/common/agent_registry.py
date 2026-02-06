@@ -27,14 +27,46 @@ def _child_entrypoint(run_fn, logging_config):
     load_memory_store_plugins()
     run_fn()
 
+def _normalize_base_path(path: str | None) -> str | None:
+    if not path:
+        return None
+    normalized = path.strip()
+    if not normalized:
+        return None
+    if not normalized.startswith("/"):
+        normalized = f"/{normalized}"
+    if normalized != "/" and normalized.endswith("/"):
+        normalized = normalized.rstrip("/")
+    return None if normalized == "/" else normalized
+
+
+def _parse_host_port(url: str) -> tuple[str, int]:
+    parsed = urlparse(url)
+    if not parsed.hostname or not parsed.port:
+        parsed = urlparse(f"http://{url}")
+    if not parsed.hostname or not parsed.port:
+        raise ValueError(
+            f"Invalid agent url '{url}'. Expected host and port, e.g. 'http://0.0.0.0:20000'."
+        )
+    return parsed.hostname, parsed.port
+
+
 class A2AAgentServer:
-    def __init__(self, agent_builder: Callable[[], BaseAgent], card: AgentCard, log_dir: str="./logs"):
+    def __init__(
+        self,
+        agent_builder: Callable[[], BaseAgent],
+        card: AgentCard,
+        log_dir: str = "./logs",
+        base_url_path: str | None = None,
+    ):
         self.agent_builder = agent_builder
         self.card = card
         self.name = card.name
         parsed_url = urlparse(self.card.url)
-        self.host_name = parsed_url.hostname
-        self.port = parsed_url.port
+        self.host_name, self.port = _parse_host_port(self.card.url)
+        self.base_url_path = _normalize_base_path(
+            base_url_path if base_url_path is not None else parsed_url.path
+        )
         self.log_dir = log_dir
         self.server: Optional[uvicorn.Server] = None
         self.shutdown_event = asyncio.Event()
@@ -52,14 +84,24 @@ class A2AAgentServer:
 
             # Create server
             server = A2AStarletteApplication(
-                agent_card=self.card, http_handler=request_handler
+                agent_card=self.card, http_handler=request_handler,
             )
+
+            app = server.build()
+            if self.base_url_path:
+                from starlette.applications import Starlette
+                from starlette.routing import Mount
+
+                app = Starlette(routes=[Mount(self.base_url_path, app=app)])
+                logger.info(
+                    "Mounting A2A server at base path %s", self.base_url_path
+                )
 
             logger.info(f"Starting server on {self.host_name}:{self.port}")
 
             # Run the server
             uvicorn.run(
-                server.build(), host=self.host_name, port=self.port, log_level="info"
+                app, host=self.host_name, port=self.port, log_level="info"
             )
             logger.info("Uvicorn server exited")
         except Exception as e:
