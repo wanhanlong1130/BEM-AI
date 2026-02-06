@@ -23,10 +23,19 @@ from automa_ai.retrieval import RetrieverProviderSpec, resolve_retriever
 from automa_ai.common.utils import map_mcp_config_to_server_config
 from automa_ai.memory.manager import DefaultMemoryManager
 from automa_ai.skills import SkillManager, SkillsConfig
+from automa_ai.config.tools import ToolsConfig, ToolSpec
 
 logger = logging.getLogger(__name__)
 
-def resolve_chat_model(backend: GenericLLM, model_name: str, agent_type: GenericAgentType, base_url: str | None = None, api_key: str | None = None, api_version: str | None = None):
+
+def resolve_chat_model(
+    backend: GenericLLM,
+    model_name: str,
+    agent_type: GenericAgentType,
+    base_url: str | None = None,
+    api_key: str | None = None,
+    api_version: str | None = None,
+):
     if backend == GenericLLM.OLLAMA:
         return ChatOllama(model=model_name, base_url=base_url, temperature=0)
     elif backend == GenericLLM.BEDROCK:
@@ -34,47 +43,71 @@ def resolve_chat_model(backend: GenericLLM, model_name: str, agent_type: Generic
         aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
         aws_region = os.getenv("AWS_REGION")
         if aws_access_key_id is None or aws_secret_access_key is None:
-            logger.warning("AWS_ACCESS_KEY_ID, AWS_REGION, AWS_SECRET_ACCESS_KEY are not set")
-            return ChatBedrockConverse(model=model_name, region_name=aws_region, temperature=0)
-        return ChatBedrockConverse(model=model_name, region_name=aws_region, aws_access_key_id=SecretStr(aws_access_key_id), aws_secret_access_key=SecretStr(aws_secret_access_key))
+            logger.warning(
+                "AWS_ACCESS_KEY_ID, AWS_REGION, AWS_SECRET_ACCESS_KEY are not set"
+            )
+            return ChatBedrockConverse(
+                model=model_name, region_name=aws_region, temperature=0
+            )
+        return ChatBedrockConverse(
+            model=model_name,
+            region_name=aws_region,
+            aws_access_key_id=SecretStr(aws_access_key_id),
+            aws_secret_access_key=SecretStr(aws_secret_access_key),
+        )
     elif backend == GenericLLM.OPENAI:
-         assert api_key, "You must provide an API key to access OpenAI GPT models"
-         # Need support for API key
-         # Detect Azure automatically
-         if base_url and "azure.com" in base_url.lower():
-             # Azure OpenAI
-             if not api_version:
-                 raise ValueError(
-                     "AzureChatOpenAI requires azure_api_version and azure_deployment"
-                 )
-             streaming = True if agent_type is GenericAgentType.LANGGRAPHCHAT else False
-             return AzureChatOpenAI(
-                 azure_endpoint=base_url,
-                 api_key=SecretStr(api_key),
-                 api_version=api_version,
-                 azure_deployment=model_name,
-                 streaming=streaming,
-             )
-         return ChatOpenAI(model=model_name, base_url=base_url, api_key=SecretStr(api_key), temperature=0, streaming=True)
+        assert api_key, "You must provide an API key to access OpenAI GPT models"
+        # Need support for API key
+        # Detect Azure automatically
+        if base_url and "azure.com" in base_url.lower():
+            # Azure OpenAI
+            if not api_version:
+                raise ValueError(
+                    "AzureChatOpenAI requires azure_api_version and azure_deployment"
+                )
+            streaming = True if agent_type is GenericAgentType.LANGGRAPHCHAT else False
+            return AzureChatOpenAI(
+                azure_endpoint=base_url,
+                api_key=SecretStr(api_key),
+                api_version=api_version,
+                azure_deployment=model_name,
+                streaming=streaming,
+            )
+        return ChatOpenAI(
+            model=model_name,
+            base_url=base_url,
+            api_key=SecretStr(api_key),
+            temperature=0,
+            streaming=True,
+        )
     elif backend == GenericLLM.CLAUDE:
-         assert api_key, "You must provide an API key to access Anthropic Claude model"
-         key = SecretStr(api_key)
-         return ChatAnthropic(model_name=model_name, base_url=base_url, temperature=0, api_key=key, timeout=None, stop=["}"])
+        assert api_key, "You must provide an API key to access Anthropic Claude model"
+        key = SecretStr(api_key)
+        return ChatAnthropic(
+            model_name=model_name,
+            base_url=base_url,
+            temperature=0,
+            api_key=key,
+            timeout=None,
+            stop=["}"],
+        )
     elif backend == GenericLLM.GEMINI:
-         assert os.getenv("GOOGLE_API_KEY"), "You must add GOOGLE_API_KEY in the system environment."
-         streaming = True if agent_type is GenericAgentType.LANGGRAPHCHAT else False
-         return ChatGoogleGenerativeAI(
-             model=model_name,
-             temperature=0,
-             timeout=None,
-             max_retries=2,
-             max_tokens=None,
-             streaming=streaming,
-         )
+        assert os.getenv(
+            "GOOGLE_API_KEY"
+        ), "You must add GOOGLE_API_KEY in the system environment."
+        streaming = True if agent_type is GenericAgentType.LANGGRAPHCHAT else False
+        return ChatGoogleGenerativeAI(
+            model=model_name,
+            temperature=0,
+            timeout=None,
+            max_retries=2,
+            max_tokens=None,
+            streaming=streaming,
+        )
     elif backend == GenericLLM.LITELLAMA:
-         return LiteLlm(model=model_name)
+        return LiteLlm(model=model_name)
     else:
-         raise ValueError(f"Unsupported model backend: {backend}")
+        raise ValueError(f"Unsupported model backend: {backend}")
 
 
 class AgentFactory:
@@ -95,6 +128,7 @@ class AgentFactory:
         enable_metrics: bool determine whether metrics tracking per task / query should be enabled or not.
         debug: bool determine whether debug mode should be enabled or not.
     """
+
     def __init__(
         self,
         card: AgentCard,
@@ -108,6 +142,7 @@ class AgentFactory:
         subagent_config: List[SubAgentSpec] | None = None,
         memory_config: Dict | None = None,
         skills_config: SkillsConfig | Dict | None = None,
+        tools_config: ToolsConfig | Dict | List[Dict] | None = None,
         model_base_url: str | None = None,
         api_key: str | None = None,
         api_version: str | None = None,
@@ -125,6 +160,7 @@ class AgentFactory:
         self.subagent_config = subagent_config
         self.memory_config = memory_config
         self.skills_config = skills_config
+        self.tools_config = tools_config
         self.model_base_url = model_base_url
         self.api_key = api_key
         self.api_version = api_version
@@ -135,7 +171,14 @@ class AgentFactory:
         return self.__call__()
 
     def __call__(self) -> BaseAgent:
-        chat_model = resolve_chat_model(self.chat_model, self.model_name, self.agent_type, self.model_base_url, self.api_key, self.api_version)
+        chat_model = resolve_chat_model(
+            self.chat_model,
+            self.model_name,
+            self.agent_type,
+            self.model_base_url,
+            self.api_key,
+            self.api_version,
+        )
 
         mcp_servers = None
         logger.info(f"Checking MCP servers to the agent: {self.card.name}...")
@@ -160,13 +203,24 @@ class AgentFactory:
             if config.enabled:
                 skill_manager = SkillManager(config)
 
+        built_tool_specs: list[ToolSpec] | None = None
+        if self.tools_config:
+            if isinstance(self.tools_config, ToolsConfig):
+                built_tool_specs = self.tools_config.tools
+            elif isinstance(self.tools_config, list):
+                built_tool_specs = [
+                    ToolSpec.model_validate(item) for item in self.tools_config
+                ]
+            else:
+                built_tool_specs = ToolsConfig.from_dict(self.tools_config).tools
+
         if self.agent_type == GenericAgentType.ADK:
             return GenericADKAgent(
                 agent_name=self.card.name,
                 description=self.card.description,
                 instructions=self.instructions,
                 chat_model=chat_model,
-                mcp_servers=mcp_servers
+                mcp_servers=mcp_servers,
             )
         elif self.agent_type == GenericAgentType.LANGGRAPHCHAT:
             return GenericLangGraphChatAgent(
@@ -176,12 +230,17 @@ class AgentFactory:
                 response_format=self.response_format,
                 chat_model=chat_model,
                 mcp_servers=mcp_servers,
-                retriever=resolve_retriever(self.retriever_spec) if self.retriever_spec else None,
+                retriever=(
+                    resolve_retriever(self.retriever_spec)
+                    if self.retriever_spec
+                    else None
+                ),
                 subagents=self.subagent_config if self.subagent_config else None,
                 skills_manager=skill_manager,
+                default_tools=built_tool_specs,
                 memory_manager=memory_manager,
-                enable_metrics = self.enable_metrics,
-                debug=self.debug
+                enable_metrics=self.enable_metrics,
+                debug=self.debug,
             )
 
         elif self.agent_type == GenericAgentType.LANGGRAPH:
@@ -192,8 +251,8 @@ class AgentFactory:
                 response_format=self.response_format,
                 chat_model=chat_model,
                 mcp_servers=mcp_servers,
-                enable_metrics = self.enable_metrics,
-                debug = self.debug
+                enable_metrics=self.enable_metrics,
+                debug=self.debug,
             )
 
         elif self.agent_type == GenericAgentType.ORCHESTRATOR:

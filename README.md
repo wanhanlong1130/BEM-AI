@@ -105,6 +105,31 @@ Project configuration is managed through `pyproject.toml`. Key configuration are
 
 ### Retriever configuration
 
+### Default tools configuration
+
+You can enable built-in tools directly from config using a `tools` list.
+
+```yaml
+tools:
+  - type: web_search
+    config:
+      provider: auto
+      serper:
+        api_key: ${SERPER_API_KEY}
+      firecrawl:
+        api_key: ${FIRECRAWL_API_KEY}
+      scrape:
+        enabled: true
+        max_pages: 5
+      rerank:
+        provider: opensource
+        top_k: 5
+```
+
+Then pass this to `AgentFactory(..., tools_config=tools)` for `LANGGRAPHCHAT` agents.
+See `docs/tools.md` and `examples/web_search_demo.py` for a runnable example.
+
+
 Automa-AI retrieval uses a provider-based spec (by name or dotted import path). Registry names must
 be registered with `register_retriever_provider(...)`, and only the embedding section is standardized;
 `retrieval_provider_config` is passed through to the selected provider.
