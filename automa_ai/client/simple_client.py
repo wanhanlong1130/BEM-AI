@@ -138,7 +138,7 @@ class SimpleClient:
             await self.initialize_agent_card(httpx_client=httpx_client)
             # start:send_message_streaming
             client = A2AClient(
-                httpx_client=httpx_client, agent_card=self.public_card
+                httpx_client=httpx_client, agent_card=self.public_card, url=self.agent_url
             )
             logger.info('A2AClient initialized.')
 
