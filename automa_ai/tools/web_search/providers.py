@@ -21,12 +21,13 @@ async def serper_search(
     api_key: str,
     max_results: int,
     time_range: str | None = None,
+    endpoint: str = "https://google.serper.dev/search",
 ) -> list[dict[str, Any]]:
     payload: dict[str, Any] = {"q": query, "num": max_results}
     if time_range:
         payload["tbs"] = time_range
     resp = await client.post(
-        "https://google.serper.dev/search",
+        endpoint,
         headers={"X-API-KEY": api_key},
         json=payload,
     )
@@ -58,12 +59,19 @@ async def duckduckgo_search(
     return [_normalize_result(x, "duckduckgo") for x in rows][:max_results]
 
 
-async def firecrawl_scrape(client: httpx.AsyncClient, url: str, api_key: str) -> str:
+async def firecrawl_scrape(
+    client: httpx.AsyncClient,
+    url: str,
+    api_key: str,
+    endpoint: str = "https://api.firecrawl.dev/v1/scrape",
+) -> str:
     resp = await client.post(
-        "https://api.firecrawl.dev/v1/scrape",
+        endpoint,
         headers={"Authorization": f"Bearer {api_key}"},
         json={"url": url, "formats": ["markdown"]},
     )
+    if resp.status_code == 401:
+        raise ValueError("Firecrawl authentication failed (401).")
     if resp.status_code >= 400:
         raise RuntimeError(f"Firecrawl request failed with status {resp.status_code}.")
     data = resp.json().get("data") or {}

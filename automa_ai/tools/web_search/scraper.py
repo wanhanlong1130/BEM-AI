@@ -13,6 +13,8 @@ async def extract_text(html: str) -> str:
         if text:
             return text
     except Exception:
+        # Gracefully fall back to BeautifulSoup if trafilatura is unavailable
+        # or fails to extract readable text.
         pass
 
     from bs4 import BeautifulSoup
@@ -23,6 +25,8 @@ async def extract_text(html: str) -> str:
 
 async def oss_scrape(client: httpx.AsyncClient, url: str, max_chars: int) -> str:
     response = await client.get(url, follow_redirects=True)
+    response.raise_for_status()
+
     content_type = response.headers.get("content-type", "")
     if "text/html" not in content_type and "application/xhtml+xml" not in content_type:
         return ""

@@ -62,6 +62,7 @@ class WebSearchTool(BaseDefaultTool):
                     api_key=self.config.serper.api_key or "",
                     max_results=args.max_results,
                     time_range=args.time_range,
+                    endpoint=self.config.serper.endpoint,
                 )
             else:
                 rows = await duckduckgo_search(
@@ -89,7 +90,10 @@ class WebSearchTool(BaseDefaultTool):
                             and self.config.firecrawl.api_key
                         ):
                             row["content"] = await firecrawl_scrape(
-                                client, url, self.config.firecrawl.api_key
+                                client,
+                                url,
+                                self.config.firecrawl.api_key,
+                                endpoint=self.config.firecrawl.endpoint,
                             )
                         else:
                             row["content"] = await oss_scrape(
@@ -100,9 +104,10 @@ class WebSearchTool(BaseDefaultTool):
                 timings["scrape_ms"] = int((time.perf_counter() - t1) * 1000)
 
             t2 = time.perf_counter()
-            reranker_used = self.config.rerank.provider
             try:
-                rows = await self._rerank(client, args.query, rows, args.top_k)
+                rows, reranker_used = await self._rerank(
+                    client, args.query, rows, args.top_k, warnings
+                )
             except Exception as exc:
                 warnings.append(f"Rerank failed: {exc}")
                 reranker_used = "none"
@@ -136,31 +141,55 @@ class WebSearchTool(BaseDefaultTool):
         query: str,
         rows: list[dict[str, Any]],
         top_k: int,
-    ) -> list[dict[str, Any]]:
+        warnings: list[str],
+    ) -> tuple[list[dict[str, Any]], str]:
         provider = self.config.rerank.provider
         order_scores: list[tuple[int, float]]
-        if provider == "jina" and self.config.rerank.jina_api_key:
-            order_scores = await jina_rerank(
-                client, query, rows, self.config.rerank.jina_api_key, top_k
-            )
-        elif provider == "cohere" and self.config.rerank.cohere_api_key:
-            order_scores = await cohere_rerank(
-                client, query, rows, self.config.rerank.cohere_api_key, top_k
-            )
+        reranker_used = provider
+
+        if provider == "jina":
+            if not self.config.rerank.jina_api_key:
+                warnings.append(
+                    "Rerank provider 'jina' is configured but no API key was provided; falling back to opensource BM25 rerank."
+                )
+                reranker_used = "opensource"
+                order_scores = self._opensource_rerank(query, rows, top_k)
+            else:
+                order_scores = await jina_rerank(
+                    client, query, rows, self.config.rerank.jina_api_key, top_k
+                )
+        elif provider == "cohere":
+            if not self.config.rerank.cohere_api_key:
+                warnings.append(
+                    "Rerank provider 'cohere' is configured but no API key was provided; falling back to opensource BM25 rerank."
+                )
+                reranker_used = "opensource"
+                order_scores = self._opensource_rerank(query, rows, top_k)
+            else:
+                order_scores = await cohere_rerank(
+                    client, query, rows, self.config.rerank.cohere_api_key, top_k
+                )
         elif provider == "none":
-            return rows[:top_k]
+            return rows[:top_k], "none"
         else:
-            scores = bm25_scores(query, rows)
-            order_scores = list(enumerate(scores))
-            order_scores.sort(key=lambda x: x[1], reverse=True)
-            order_scores = order_scores[:top_k]
+            reranker_used = "opensource"
+            order_scores = self._opensource_rerank(query, rows, top_k)
 
         out: list[dict[str, Any]] = []
         for idx, score in order_scores:
             row = dict(rows[idx])
             row["score"] = score
             out.append(row)
-        return out
+        return out, reranker_used
+
+    @staticmethod
+    def _opensource_rerank(
+        query: str, rows: list[dict[str, Any]], top_k: int
+    ) -> list[tuple[int, float]]:
+        scores = bm25_scores(query, rows)
+        order_scores = list(enumerate(scores))
+        order_scores.sort(key=lambda x: x[1], reverse=True)
+        return order_scores[:top_k]
 
     @staticmethod
     def _is_valid_http_url(url: str | None) -> bool:

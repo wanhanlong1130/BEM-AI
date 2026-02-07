@@ -42,8 +42,6 @@ packages = [{include = "automa_ai", from = "."}]
 # --- Optional dependencies for examples ---
 [project.optional-dependencies]
 web = [
-    "httpx>=0.28.1",
-    "bs4>=0.0.2",
     "trafilatura>=1.12.2",
     "duckduckgo-search>=7.2.1",
     "rank-bm25>=0.2.2",

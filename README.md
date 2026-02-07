@@ -103,8 +103,6 @@ Project configuration is managed through `pyproject.toml`. Key configuration are
 - **Project Metadata**: Version, description, and author information
 - **Optional**: optional packages to use for UI integration and running examples.
 
-### Retriever configuration
-
 ### Default tools configuration
 
 You can enable built-in tools directly from config using a `tools` list.
@@ -129,6 +127,8 @@ tools:
 Then pass this to `AgentFactory(..., tools_config=tools)` for `LANGGRAPHCHAT` agents.
 See `docs/tools.md` and `examples/web_search_demo.py` for a runnable example.
 
+
+### Retriever configuration
 
 Automa-AI retrieval uses a provider-based spec (by name or dotted import path). Registry names must
 be registered with `register_retriever_provider(...)`, and only the embedding section is standardized;

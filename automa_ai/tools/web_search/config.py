@@ -21,7 +21,6 @@ class FirecrawlConfig(BaseModel):
 class ScrapeConfig(BaseModel):
     enabled: bool = True
     max_pages: int = Field(default=5, ge=0, le=20)
-    timeout_s: float = Field(default=8.0, gt=0)
     max_content_chars: int = Field(default=8000, ge=500)
 
 

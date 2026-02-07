@@ -47,6 +47,8 @@ async def jina_rerank(
             "top_n": top_k,
         },
     )
+    if resp.status_code == 401:
+        raise ValueError("Jina rerank authentication failed (401).")
     if resp.status_code >= 400:
         raise RuntimeError(f"Jina rerank failed with status {resp.status_code}.")
     results = resp.json().get("results") or []
@@ -71,6 +73,8 @@ async def cohere_rerank(
             "top_n": top_k,
         },
     )
+    if resp.status_code == 401:
+        raise ValueError("Cohere rerank authentication failed (401).")
     if resp.status_code >= 400:
         raise RuntimeError(f"Cohere rerank failed with status {resp.status_code}.")
     results = resp.json().get("results") or []

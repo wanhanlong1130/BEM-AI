@@ -82,6 +82,100 @@ async def test_url_dedupe_and_max_pages(monkeypatch: pytest.MonkeyPatch) -> None
     assert len(result["results"]) == 3
 
 
+@pytest.mark.asyncio
+async def test_warns_and_falls_back_when_rerank_key_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from automa_ai.tools.web_search.config import WebSearchToolConfig
+    from automa_ai.tools.web_search import tool as module
+
+    web_tool = WebSearchTool(
+        WebSearchToolConfig.model_validate(
+            {
+                "provider": "opensource",
+                "scrape": {"enabled": False},
+                "rerank": {"provider": "jina", "top_k": 2},
+            }
+        )
+    )
+
+    async def fake_search(
+        query: str, max_results: int, region: str | None = None
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "title": "alpha",
+                "url": "https://a.com",
+                "snippet": "alpha",
+                "source": "duckduckgo",
+            },
+            {
+                "title": "beta",
+                "url": "https://b.com",
+                "snippet": "",
+                "source": "duckduckgo",
+            },
+        ]
+
+    monkeypatch.setattr(module, "duckduckgo_search", fake_search)
+
+    result = await web_tool.invoke({"query": "alpha", "top_k": 2})
+    assert result["meta"]["reranker_used"] == "opensource"
+    assert any("falling back" in warning for warning in result["meta"]["warnings"])
+
+
+@pytest.mark.asyncio
+async def test_configurable_endpoints_are_used(monkeypatch: pytest.MonkeyPatch) -> None:
+    from automa_ai.tools.web_search.config import WebSearchToolConfig
+    from automa_ai.tools.web_search import tool as module
+
+    web_tool = WebSearchTool(
+        WebSearchToolConfig.model_validate(
+            {
+                "provider": "serper",
+                "serper": {"api_key": "k", "endpoint": "https://serper.example/search"},
+                "firecrawl": {
+                    "api_key": "fc",
+                    "enabled": True,
+                    "endpoint": "https://firecrawl.example/scrape",
+                },
+                "rerank": {"provider": "none", "top_k": 1},
+            }
+        )
+    )
+
+    seen: dict[str, str] = {}
+
+    async def fake_serper(
+        client: Any,
+        query: str,
+        api_key: str,
+        max_results: int,
+        time_range: str | None = None,
+        endpoint: str = "",
+    ) -> list[dict[str, Any]]:
+        seen["serper"] = endpoint
+        return [
+            {"title": "a", "url": "https://a.com", "snippet": "one", "source": "serper"}
+        ]
+
+    async def fake_firecrawl(
+        client: Any,
+        url: str,
+        api_key: str,
+        endpoint: str = "",
+    ) -> str:
+        seen["firecrawl"] = endpoint
+        return "content"
+
+    monkeypatch.setattr(module, "serper_search", fake_serper)
+    monkeypatch.setattr(module, "firecrawl_scrape", fake_firecrawl)
+
+    await web_tool.invoke({"query": "test", "top_k": 1, "include_raw_content": True})
+    assert seen["serper"] == "https://serper.example/search"
+    assert seen["firecrawl"] == "https://firecrawl.example/scrape"
+
+
 def test_bm25_scores_deterministic_order() -> None:
     rows = [
         {"title": "alpha beta", "snippet": "", "content": ""},

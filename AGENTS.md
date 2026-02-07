@@ -116,6 +116,17 @@ See `examples/sim_chat_stream_demo/chatbot.py` for a concrete example that wires
 - **Add a new skill**: drop a `.md` or `.txt` file under an allowed root and register it in `skills_config` (or add a directory registry entry).【F:automa_ai/skills/README.md†L10-L35】
 - **Add a new memory store**: implement `BaseMemoryStore`, register with `MemoryStoreRegistry`, then update the `memory_config` for `DefaultMemoryManager`.【F:automa_ai/memory/memory_stores.py†L1-L59】【F:automa_ai/memory/manager.py†L46-L82】
 
+
+## Default tools (non-MCP)
+
+BEM-AI now supports first-class default tools configured directly in `AgentFactory` via `tools_config` (not MCP).
+
+- Core configuration models are in `automa_ai/config/tools.py` (`ToolsConfig`, `ToolSpec`).
+- Registry/factory and internal tool interface are in `automa_ai/tools/base.py` and `automa_ai/tools/registry.py`.
+- Built-in tools are registered in `automa_ai/tools/__init__.py`.
+- `AgentFactory` accepts `tools_config` and passes tool specs to `GenericLangGraphChatAgent`, which binds tools only when configured.
+- Built-in `web_search` implementation is under `automa_ai/tools/web_search/` with Serper/OSS search, Firecrawl/OSS scraping, and Jina/Cohere/OSS reranking.
+
 ## Building and Testing
 
 The repository does not include a dedicated build step in this document, but you can run focused tests for the key subsystems below.
