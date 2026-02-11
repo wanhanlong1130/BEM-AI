@@ -48,7 +48,12 @@ async def main() -> None:
 
     config = ToolsConfig.from_dict(_load_config(args.config))
     tools = build_langchain_tools(config.tools)
-    web_search = next(t for t in tools if t.name == "web_search")
+    web_search = next((t for t in tools if t.name == "web_search"), None)
+    if web_search is None:
+        raise ValueError(
+            "No tool named 'web_search' was found. "
+            "Please ensure your tools configuration includes a 'web_search' tool."
+        )
     out = await web_search.ainvoke({"query": args.query})
     print(json.dumps(out, indent=2))
 
