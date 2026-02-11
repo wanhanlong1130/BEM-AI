@@ -127,6 +127,25 @@ tools:
 Then pass this to `AgentFactory(..., tools_config=tools)` for `LANGGRAPHCHAT` agents.
 See `docs/tools.md` and `examples/web_search_demo.py` for a runnable example.
 
+### A2A Server Base Path
+
+You can mount an A2A agent server under a URL prefix by passing `base_url_path` to
+`A2AAgentServer`. This is useful when serving behind a reverse proxy or when you
+want a dedicated path segment for the agent.
+
+```python
+from automa_ai.common.agent_registry import A2AAgentServer
+
+chatbot_a2a = A2AAgentServer(chatbot, public_agent_card, base_url_path="/permit")
+```
+
+Notes:
+- Include a trailing slash in client URLs to avoid 307 redirects (SSE does not
+  follow redirects): e.g., 
+
+```python 
+SimpleClient(agent_url=f"{A2A_SERVER_URL}/permit/")
+```
 
 ### Retriever configuration
 

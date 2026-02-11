@@ -112,6 +112,7 @@ See `examples/sim_chat_stream_demo/chatbot.py` for a concrete example that wires
 ## Extension tips
 
 - **Add a new subagent**: build an `AgentCard`, wrap it in `SubAgentSpec`, and pass it to the main agent. Ensure the name is unique after normalization (`tool_name`).【F:automa_ai/agents/remote_agent.py†L29-L65】【F:automa_ai/agents/langgraph_chatagent.py†L93-L106】
+- **Serve an agent under a base path**: pass `base_url_path="/my-path"` to `A2AAgentServer`, and ensure the agent card `url` and client URLs include the same prefix (trailing slash recommended to avoid SSE redirects).【F:automa_ai/common/agent_registry.py†L21-L98】
 - **Add a new retriever provider**: implement a provider with `from_config(spec) -> BaseRetriever`, register it with `register_retriever_provider`, and pass a `RetrieverProviderSpec` into `AgentFactory(retriever_spec=...)`.【F:automa_ai/retrieval/providers/base.py†L1-L13】【F:automa_ai/retrieval/registry.py†L1-L14】【F:automa_ai/agents/agent_factory.py†L107-L185】
 - **Add a new skill**: drop a `.md` or `.txt` file under an allowed root and register it in `skills_config` (or add a directory registry entry).【F:automa_ai/skills/README.md†L10-L35】
 - **Add a new memory store**: implement `BaseMemoryStore`, register with `MemoryStoreRegistry`, then update the `memory_config` for `DefaultMemoryManager`.【F:automa_ai/memory/memory_stores.py†L1-L59】【F:automa_ai/memory/manager.py†L46-L82】
@@ -147,3 +148,23 @@ All pull request comments should be complete sentences and end with a period.
 - All tests must succeed. 
 - Add new tests for any new feature or bug fix. 
 - Update documentation for user-facing changes. 
+
+## Learning Mode
+When a user explicitly expressed that they are currently onboarding or learning this repository, the agent shall follow the additional instructions in the learning mode.
+
+### BEFORE AGENT WRITING CODE
+- Explain what you're about to do and why
+- Break it down into steps the user can follow
+- Wait for the user's OK before proceeding
+
+### AFTER WRITING CODE
+- Explain what each part does
+- Ask the user **3 questions** to verify their understanding
+- If the user answer wrong, explain again until the user get it
+- **Do NOT let the user commit** until the user pass your questions
+
+### GENERAL RULES FOR LEARNING MODE
+- **Never** generate code the user can't explain
+- If the user asks for something complex, **suggest simpler alternatives**
+- Treat every session as a **teaching opportunity**
+- Be direct, **Tell the user when they are doing something wrong**
