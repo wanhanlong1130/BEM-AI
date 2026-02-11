@@ -41,6 +41,13 @@ packages = [{include = "automa_ai", from = "."}]
 
 # --- Optional dependencies for examples ---
 [project.optional-dependencies]
+web = [
+    "trafilatura>=1.12.2",
+    "duckduckgo-search>=7.2.1",
+    "rank-bm25>=0.2.2",
+    "pyyaml>=6.0.2",
+]
+rerank = ["sentence-transformers>=3.4.1"]
 sim_bem_network = ["openstudio>=3.10.0", "streamlit>=1.51.0"]
 sim_chat_demo = ["streamlit>=1.51.0"]
 sim_chat_stream_demo = ["streamlit>=1.51.0"]
