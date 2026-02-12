@@ -40,7 +40,7 @@ def _normalize_base_path(path: str | None) -> str | None:
     return None if normalized == "/" else normalized
 
 
-def _parse_host_port(url: str) -> tuple[str, int]:
+def _parse_agent_url(url: str):
     parsed = urlparse(url)
     if not parsed.hostname or not parsed.port:
         parsed = urlparse(f"http://{url}")
@@ -48,7 +48,7 @@ def _parse_host_port(url: str) -> tuple[str, int]:
         raise ValueError(
             f"Invalid agent url '{url}'. Expected host and port, e.g. 'http://0.0.0.0:20000'."
         )
-    return parsed.hostname, parsed.port
+    return parsed
 
 
 class A2AAgentServer:
@@ -62,8 +62,8 @@ class A2AAgentServer:
         self.agent_builder = agent_builder
         self.card = card
         self.name = card.name
-        parsed_url = urlparse(self.card.url)
-        self.host_name, self.port = _parse_host_port(self.card.url)
+        parsed_url = _parse_agent_url(self.card.url)
+        self.host_name, self.port = parsed_url.hostname, parsed_url.port
         self.base_url_path = _normalize_base_path(
             base_url_path if base_url_path is not None else parsed_url.path
         )
