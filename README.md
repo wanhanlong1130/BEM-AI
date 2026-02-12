@@ -103,6 +103,69 @@ Project configuration is managed through `pyproject.toml`. Key configuration are
 - **Project Metadata**: Version, description, and author information
 - **Optional**: optional packages to use for UI integration and running examples.
 
+### A2A Server Base Path
+
+You can mount an A2A agent server under a URL prefix by passing `base_url_path` to
+`A2AAgentServer`. This is useful when serving behind a reverse proxy or when you
+want a dedicated path segment for the agent.
+
+```python
+from automa_ai.common.agent_registry import A2AAgentServer
+
+chatbot_a2a = A2AAgentServer(chatbot, public_agent_card, base_url_path="/permit")
+```
+
+Notes:
+- Include a trailing slash in client URLs to avoid 307 redirects (SSE does not
+  follow redirects): e.g., 
+
+```python 
+SimpleClient(agent_url=f"{A2A_SERVER_URL}/permit/")
+```
+
+### Retriever configuration
+
+Automa-AI retrieval uses a provider-based spec (by name or dotted import path). Registry names must
+be registered with `register_retriever_provider(...)`, and only the embedding section is standardized;
+`retrieval_provider_config` is passed through to the selected provider.
+
+**Registered provider (registry name)**
+```yaml
+retriever:
+  enabled: true
+  provider: "helpdesk_chroma"
+  top_k: 6
+  embedding:
+    provider: "ollama"
+    model: "nomic-embed-text"
+    api_key: null
+    base_url: "http://localhost:11434"
+    extra: {}
+  retrieval_provider_config:
+    db_path: "/data/chroma"
+    collection_name: "my_collection"
+```
+
+**Custom provider (dotted import path)**
+```yaml
+retriever:
+  enabled: true
+  impl: "my_project.retrieval:MyRetrieverProvider"
+  top_k: 10
+  embedding:
+    provider: "openai"
+    model: "text-embedding-3-large"
+    api_key: "${OPENAI_API_KEY}"
+    base_url: null
+    extra:
+      dimensions: 3072
+  retrieval_provider_config:
+    index_name: "prod-index"
+    namespace: "tenant-a"
+    pinecone_api_key: "${PINECONE_API_KEY}"
+    pinecone_env: "us-west-2"
+```
+
 ## Examples
 #### Single Agent Chatbot with Streamlit UI interface
 This example demonstrates the use of automa-ai for creating a live-streaming chatbot.
