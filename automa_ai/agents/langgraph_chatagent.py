@@ -10,7 +10,7 @@ from langchain.agents import create_agent
 from pydantic import BaseModel
 
 from automa_ai.agents.remote_agent import SubAgentSpec, make_subagent_tool, build_subagent_delegation_instruction, \
-    StreamEvent
+    StreamEvent, set_subagent_context_id, reset_subagent_context_id, set_subagent_emitter, reset_subagent_emitter
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.message_accumulator import AIMessageAccumulator
 from automa_ai.common.response_parser import extract_and_parse_json
@@ -158,7 +158,13 @@ class GenericLangGraphChatAgent(BaseAgent):
 
         if not self.graph:
             await self.init_graph(emit_subagent_event)
-        response = await self.graph.ainvoke({"messages": [("user", query)]}, config)
+        context_token = set_subagent_context_id(session_id)
+        emitter_token = set_subagent_emitter(emit_subagent_event)
+        try:
+            response = await self.graph.ainvoke({"messages": [("user", query)]}, config)
+        finally:
+            reset_subagent_emitter(emitter_token)
+            reset_subagent_context_id(context_token)
         return response
 
     async def stream(self, query, session_id, task_id) -> AsyncIterable[dict[str, Any]]:
@@ -196,6 +202,8 @@ class GenericLangGraphChatAgent(BaseAgent):
             """Forward agent chunks to output queue"""
             # use to track the tool call steps
             active_tool_calls = 0
+            context_token = set_subagent_context_id(session_id)
+            emitter_token = set_subagent_emitter(emit_subagent_event)
             try:
                 async for chunk in self.graph.astream(inputs, config, stream_mode="messages"):
                     if self.debug:
@@ -288,6 +296,8 @@ class GenericLangGraphChatAgent(BaseAgent):
                     session_id,
                     task_id)
             finally:
+                reset_subagent_emitter(emitter_token)
+                reset_subagent_context_id(context_token)
                 await output_queue.put(None)
 
         if self.memory_manager:
