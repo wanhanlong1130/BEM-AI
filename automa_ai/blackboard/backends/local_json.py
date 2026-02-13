@@ -18,6 +18,10 @@ class LocalJSONBlackboardStore(BlackboardStore):
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
     def _path(self, session_id: str) -> Path:
+        if not session_id or session_id in {".", ".."}:
+            raise ValueError("session_id must be a non-empty, path-safe identifier.")
+        if "/" in session_id or "\\" in session_id:
+            raise ValueError("session_id must not include path separators.")
         return self.base_dir / f"{session_id}.blackboard.json"
 
     def load(self, session_id: str) -> BlackboardDocument:

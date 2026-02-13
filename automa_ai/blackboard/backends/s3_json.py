@@ -46,11 +46,16 @@ class S3JSONBlackboardStore(BlackboardStore):
     def save(self, doc: BlackboardDocument, expected_revision: int | None = None) -> BlackboardDocument:
         key = self._key(doc.session_id)
         current_revision = -1
+        current_etag = None
         try:
+            head = self.s3.head_object(Bucket=self.bucket, Key=key)
+            current_etag = head.get("ETag")
+        except Exception:
+            # head_object may raise a provider-specific not-found error for missing keys.
+            pass
+        else:
             current = self.load(doc.session_id)
             current_revision = current.revision
-        except DocumentNotFoundError:
-            pass
 
         if expected_revision is not None and expected_revision != current_revision:
             raise RevisionConflictError(
@@ -60,10 +65,19 @@ class S3JSONBlackboardStore(BlackboardStore):
             doc.revision = current_revision
         bump_revision(doc)
 
-        self.s3.put_object(
-            Bucket=self.bucket,
-            Key=key,
-            Body=json.dumps(doc.to_json_dict()).encode("utf-8"),
-            ContentType="application/json",
-        )
+        put_kwargs = {
+            "Bucket": self.bucket,
+            "Key": key,
+            "Body": json.dumps(doc.to_json_dict()).encode("utf-8"),
+            "ContentType": "application/json",
+        }
+        if current_etag is not None:
+            put_kwargs["IfMatch"] = current_etag
+        else:
+            put_kwargs["IfNoneMatch"] = "*"
+
+        try:
+            self.s3.put_object(**put_kwargs)
+        except Exception as exc:
+            raise RevisionConflictError("Conditional write failed due to revision mismatch.") from exc
         return doc
