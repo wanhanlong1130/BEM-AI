@@ -42,7 +42,7 @@ class DynamoDBJSONBlackboardStore(BlackboardStore):
             current = self.load(doc.session_id)
             current_revision = current.revision
         except DocumentNotFoundError:
-            # Missing row is expected for first write of a session.
+            # Document does not exist yet; leave current_revision as -1 to indicate absence.
             pass
 
         if expected_revision is not None and current_revision != expected_revision:
