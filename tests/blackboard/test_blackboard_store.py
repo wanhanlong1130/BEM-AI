@@ -52,6 +52,16 @@ def test_parse_path_and_get_path_value():
     assert get_path_value(data, "a.b[0].c") == 42
 
 
+def test_local_backend_rejects_path_traversal_session_id(store):
+    with pytest.raises(ValueError):
+        store.create(
+            session_id="../escape",
+            schema_name="ce_workflow",
+            schema_version="1.0",
+            initial_data={"project": {"description": {"confirmed_text": "draft"}}, "recommended_ces": []},
+        )
+
+
 def test_local_backend_create_save_and_apply_patch(store):
     doc = store.create(
         session_id="s1",

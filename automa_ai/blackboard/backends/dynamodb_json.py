@@ -42,6 +42,7 @@ class DynamoDBJSONBlackboardStore(BlackboardStore):
             current = self.load(doc.session_id)
             current_revision = current.revision
         except DocumentNotFoundError:
+            # Missing row is expected for first write of a session.
             pass
 
         if expected_revision is not None and current_revision != expected_revision:
@@ -52,18 +53,15 @@ class DynamoDBJSONBlackboardStore(BlackboardStore):
             doc.revision = current_revision
         bump_revision(doc)
 
-        condition = "attribute_not_exists(session_id)"
-        values = None
-        if expected_revision is not None:
-            condition = "#rev = :expected"
-            values = {":expected": expected_revision}
-
         kwargs = {
             "Item": {"session_id": doc.session_id, "revision": doc.revision, "document": doc.to_json_dict()},
-            "ConditionExpression": condition,
         }
-        if values is not None:
-            kwargs["ExpressionAttributeValues"] = values
+
+        if current_revision < 0:
+            kwargs["ConditionExpression"] = "attribute_not_exists(session_id)"
+        else:
+            kwargs["ConditionExpression"] = "#rev = :expected"
+            kwargs["ExpressionAttributeValues"] = {":expected": current_revision}
             kwargs["ExpressionAttributeNames"] = {"#rev": "revision"}
 
         try:

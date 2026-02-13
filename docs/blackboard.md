@@ -100,6 +100,24 @@ blackboard_config = {
 }
 ```
 
+## Lifecycle and `get_or_create` behavior
+
+`GenericLangGraphChatAgent` calls `blackboard_store.get_or_create(...)` on each `invoke` and `stream` call.
+
+This means:
+- If the session document does not exist yet, a new document is created using `initial_data`.
+- If the session document already exists, the existing document is loaded and reused.
+- `initial_data` is **not** re-applied to existing documents.
+
+This preserves session continuity across multiple turns while still providing deterministic bootstrapping for new sessions.
+
+## Validation behavior when `jsonschema` is unavailable
+
+The blackboard validator uses `jsonschema` when installed.
+If `jsonschema` is missing, validation falls back to a lightweight built-in validator that enforces only a subset of JSON Schema (primarily `type`, nested `properties` traversal, and `required`).
+
+For production use, install `jsonschema` to enforce the full schema surface (such as `additionalProperties`, string/number bounds, regex patterns, and other advanced keywords).
+
 ## Agent tools
 
 When enabled, agent tool registry includes:

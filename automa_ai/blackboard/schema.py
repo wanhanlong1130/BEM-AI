@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from typing import Any
 
@@ -45,6 +46,8 @@ class BlackboardSchemaRegistry:
 
 
 class BlackboardSchemaValidator:
+    _fallback_warning_emitted = False
+
     def __init__(self, registry: BlackboardSchemaRegistry):
         self.registry = registry
 
@@ -56,6 +59,15 @@ class BlackboardSchemaValidator:
             except jsonschema.ValidationError as exc:
                 raise SchemaValidationError(str(exc)) from exc
             return
+
+        if not BlackboardSchemaValidator._fallback_warning_emitted:
+            warnings.warn(
+                "jsonschema is not installed; blackboard schema validation is running in fallback mode "
+                "with limited keyword support. Install jsonschema for full validation coverage.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            BlackboardSchemaValidator._fallback_warning_emitted = True
 
         self._fallback_validate(schema.json_schema, data)
 
