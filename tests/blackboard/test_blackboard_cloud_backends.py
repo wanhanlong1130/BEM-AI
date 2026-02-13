@@ -102,3 +102,16 @@ def test_dynamodb_backend_save_without_expected_revision_updates_existing_docume
     assert updated.revision == 2
     loaded = store.load("s1")
     assert loaded.data["items"] == ["item"]
+
+
+def test_dynamodb_backend_create_and_update_with_expected_revision():
+    store = DynamoDBJSONBlackboardStore("table", _validator(), dynamodb_table=FakeDynamoTable())
+    created = store.create("s2", "test", "1", {"items": []})
+
+    created.data["items"].append("ok")
+    updated = store.save(created, expected_revision=1)
+
+    assert created.revision == 1
+    assert updated.revision == 2
+    loaded = store.load("s2")
+    assert loaded.data["items"] == ["ok"]
