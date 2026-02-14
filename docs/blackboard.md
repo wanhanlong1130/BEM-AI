@@ -140,3 +140,18 @@ When blackboard is enabled, `AgentFactory` builds a “Shared Session Blackboard
 - Subagent delegation payloads.
 
 This keeps all participating agents aligned on shared-state behavior.
+
+## Blackboard lifecycle and `initial_data`
+
+The agent runtime calls an internal `_ensure_blackboard` helper on every `invoke`/`stream` call. This helper uses a `get_or_create` operation against the configured backend:
+
+- If a blackboard document already exists for the given `session_id`, that existing document is **loaded and reused**.
+- If no document exists yet for that `session_id`, a new document is created using the configured schema and **`initial_data`**.
+
+As a result:
+
+- `initial_data` is applied **only once**, when the blackboard is created for a session that does not yet have one.
+- Subsequent calls for the same `session_id` will always load the existing blackboard and will **not** re-apply or merge `initial_data`.
+- Changing `initial_data` in configuration after a session has already started will not affect that session’s existing blackboard document.
+
+Design your workflows and migrations with this in mind—for example, use schema versioning and explicit write operations (via `blackboard_write`) to evolve existing session documents rather than relying on changes to `initial_data`.
