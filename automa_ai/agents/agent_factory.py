@@ -24,6 +24,13 @@ from automa_ai.common.utils import map_mcp_config_to_server_config
 from automa_ai.memory.manager import DefaultMemoryManager
 from automa_ai.skills import SkillManager, SkillsConfig
 from automa_ai.config.tools import ToolsConfig, ToolSpec
+from automa_ai.config.blackboard import BlackboardConfig
+from automa_ai.blackboard.backends.local_json import LocalJSONBlackboardStore
+from automa_ai.blackboard.backends.s3_json import S3JSONBlackboardStore
+from automa_ai.blackboard.backends.dynamodb_json import DynamoDBJSONBlackboardStore
+from automa_ai.blackboard.instructions import build_blackboard_contract
+from automa_ai.blackboard.schema import BlackboardSchemaRegistry, BlackboardSchemaValidator
+from automa_ai.blackboard.errors import BackendNotConfiguredError
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +150,7 @@ class AgentFactory:
         memory_config: Dict | None = None,
         skills_config: SkillsConfig | Dict | None = None,
         tools_config: ToolsConfig | Dict | List[Dict] | None = None,
+        blackboard_config: BlackboardConfig | Dict | None = None,
         model_base_url: str | None = None,
         api_key: str | None = None,
         api_version: str | None = None,
@@ -161,6 +169,7 @@ class AgentFactory:
         self.memory_config = memory_config
         self.skills_config = skills_config
         self.tools_config = tools_config
+        self.blackboard_config = blackboard_config
         self.model_base_url = model_base_url
         self.api_key = api_key
         self.api_version = api_version
@@ -203,6 +212,48 @@ class AgentFactory:
             if config.enabled:
                 skill_manager = SkillManager(config)
 
+        blackboard_store = None
+        blackboard_contract = None
+        blackboard_schema_name = None
+        blackboard_schema_version = None
+        blackboard_initial_data = None
+        if self.blackboard_config:
+            bb_cfg = self.blackboard_config
+            if not isinstance(bb_cfg, BlackboardConfig):
+                bb_cfg = BlackboardConfig.from_dict(bb_cfg)
+            if bb_cfg.enabled:
+                registry = BlackboardSchemaRegistry()
+                registry.register(
+                    name=bb_cfg.schema_name,
+                    version=bb_cfg.schema_version,
+                    json_schema=bb_cfg.schema,
+                    description=bb_cfg.schema_description,
+                )
+                validator = BlackboardSchemaValidator(registry)
+                if bb_cfg.backend == "local_json":
+                    blackboard_store = LocalJSONBlackboardStore(base_dir=bb_cfg.base_dir or ".blackboard", validator=validator)
+                elif bb_cfg.backend == "s3_json":
+                    if not bb_cfg.s3_bucket:
+                        raise BackendNotConfiguredError("s3_bucket is required for s3_json backend.")
+                    blackboard_store = S3JSONBlackboardStore(
+                        bucket=bb_cfg.s3_bucket,
+                        prefix=bb_cfg.s3_prefix,
+                        validator=validator,
+                    )
+                elif bb_cfg.backend == "dynamodb_json":
+                    if not bb_cfg.dynamodb_table:
+                        raise BackendNotConfiguredError("dynamodb_table is required for dynamodb_json backend.")
+                    blackboard_store = DynamoDBJSONBlackboardStore(table_name=bb_cfg.dynamodb_table, validator=validator)
+                else:
+                    raise BackendNotConfiguredError(f"Unknown blackboard backend: {bb_cfg.backend}")
+
+                blackboard_schema_name = bb_cfg.schema_name
+                blackboard_schema_version = bb_cfg.schema_version
+                blackboard_initial_data = bb_cfg.initial_data
+                blackboard_contract = build_blackboard_contract(
+                    registry.resolve(bb_cfg.schema_name, bb_cfg.schema_version)
+                )
+
         built_tool_specs: list[ToolSpec] | None = None
         if self.tools_config:
             if isinstance(self.tools_config, ToolsConfig):
@@ -238,6 +289,11 @@ class AgentFactory:
                 subagents=self.subagent_config if self.subagent_config else None,
                 skills_manager=skill_manager,
                 default_tools=built_tool_specs,
+                blackboard_store=blackboard_store,
+                blackboard_schema_name=blackboard_schema_name,
+                blackboard_schema_version=blackboard_schema_version,
+                blackboard_initial_data=blackboard_initial_data,
+                blackboard_contract=blackboard_contract,
                 memory_manager=memory_manager,
                 enable_metrics=self.enable_metrics,
                 debug=self.debug,

@@ -25,6 +25,8 @@ from automa_ai.skills import SkillManager
 from automa_ai.skills.tools import build_load_skill_tool
 from automa_ai.config.tools import ToolSpec
 from automa_ai.tools import build_langchain_tools
+from automa_ai.blackboard.store import BlackboardStore
+from automa_ai.blackboard.tools import build_blackboard_tools
 
 memory = MemorySaver()
 
@@ -47,6 +49,11 @@ class GenericLangGraphChatAgent(BaseAgent):
         skills_manager: SkillManager | None = None,
         memory_manager: DefaultMemoryManager = None,
         default_tools: list[ToolSpec] | None = None,
+        blackboard_store: BlackboardStore | None = None,
+        blackboard_schema_name: str | None = None,
+        blackboard_schema_version: str | None = None,
+        blackboard_initial_data: dict | None = None,
+        blackboard_contract: str | None = None,
         enable_metrics: bool = False,
         debug: bool = False,
     ):
@@ -68,6 +75,11 @@ class GenericLangGraphChatAgent(BaseAgent):
         self.skill_manager = skills_manager
         self.metrics = None
         self.default_tool_specs = default_tools
+        self.blackboard_store = blackboard_store
+        self.blackboard_schema_name = blackboard_schema_name
+        self.blackboard_schema_version = blackboard_schema_version
+        self.blackboard_initial_data = blackboard_initial_data or {}
+        self.blackboard_contract = blackboard_contract
         self.debug = debug
         if enable_metrics:
             self.metrics = MetricsCollector()
@@ -121,7 +133,7 @@ class GenericLangGraphChatAgent(BaseAgent):
                         "Rename the agent to avoid duplicate names"
                     )
                 used_tool_name.append(base)
-                tools.append(make_subagent_tool(subagent, emitter))
+                tools.append(make_subagent_tool(subagent, emitter, self.blackboard_contract))
             # build up the instruction
             self.instructions = (
                 f"{self.instructions}\n\n"
@@ -134,6 +146,16 @@ class GenericLangGraphChatAgent(BaseAgent):
                 raise ValueError(f"Duplicate tool name '{tool.name}' detected.")
             used_tool_name.append(tool.name)
             tools.append(tool)
+
+
+        if self.blackboard_store:
+            for tool in build_blackboard_tools(self.blackboard_store):
+                if tool.name in used_tool_name:
+                    raise ValueError(f"Duplicate tool name '{tool.name}' detected.")
+                used_tool_name.append(tool.name)
+                tools.append(tool)
+            if self.blackboard_contract:
+                self.instructions = f"{self.instructions}\n\n{self.blackboard_contract}"
 
         if self.skill_manager and self.skill_manager.enabled:
             if "load_skill" in used_tool_name:
@@ -157,6 +179,18 @@ class GenericLangGraphChatAgent(BaseAgent):
             tools=tools,
         )
 
+    def _ensure_blackboard(self, session_id: str) -> None:
+        if not self.blackboard_store:
+            return
+        if not self.blackboard_schema_name or not self.blackboard_schema_version:
+            raise ValueError("Blackboard schema_name and schema_version are required when blackboard is enabled.")
+        self.blackboard_store.get_or_create(
+            session_id=session_id,
+            schema_name=self.blackboard_schema_name,
+            schema_version=self.blackboard_schema_version,
+            initial_data=self.blackboard_initial_data,
+        )
+
     async def invoke(self, query, session_id: str) -> Any:
         config = {"configurable": {"thread_id": session_id}}
         # queue for tool/subagent streaming
@@ -169,6 +203,7 @@ class GenericLangGraphChatAgent(BaseAgent):
             """
             await subagent_event_queue.put(e)
 
+        self._ensure_blackboard(session_id)
         if not self.graph:
             await self.init_graph(emit_subagent_event)
         context_token = set_subagent_context_id(session_id)
@@ -205,6 +240,7 @@ class GenericLangGraphChatAgent(BaseAgent):
         logger.info(
             f"Running planner agent stream for session {session_id} {task_id} with input {query}"
         )
+        self._ensure_blackboard(session_id)
         if not self.graph:
             await self.init_graph(emit_subagent_event)
 

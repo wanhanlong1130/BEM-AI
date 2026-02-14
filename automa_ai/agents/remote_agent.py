@@ -231,6 +231,7 @@ class SubAgentInput(BaseModel):
 def make_subagent_tool(
     spec: SubAgentSpec,
     emitter: Callable[[StreamEvent], Awaitable[None]] = None,
+    blackboard_contract: str | None = None,
 ):
     subagent = RemoteAgent(
         agent_name=spec.tool_name,
@@ -242,6 +243,13 @@ def make_subagent_tool(
 
     async def _run(task: str) -> dict:
         chunks: list[A2AToolResult] = []
+        delegated_task = task
+        if blackboard_contract:
+            delegated_task = (
+                f"{task}\n\n[SHARED SESSION BLACKBOARD CONTRACT]\n"
+                f"{blackboard_contract}\n\n"
+                "Use blackboard tools for shared state updates."
+            )
         agent_card: AgentCard = adapter.subagent.agent_card
         context_id = get_subagent_context_id()
         if agent_card.capabilities.streaming:
