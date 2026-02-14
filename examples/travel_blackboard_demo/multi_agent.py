@@ -13,7 +13,7 @@ from automa_ai.agents import GenericAgentType, GenericLLM
 from automa_ai.agents.agent_factory import AgentFactory
 from automa_ai.agents.remote_agent import SubAgentSpec
 from automa_ai.common.agent_registry import A2AAgentServer, A2AServerManager
-from examples.travel_blackboard_demo.agents.common import load_blackboard_config
+from examples.travel_blackboard_demo.agents.common import load_blackboard_config, register_travel_tools
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,6 +25,7 @@ BLACKBOARD_BASE_DIR = BASE_DIR / ".demo_blackboards"
 OLLAMA_BASE_URL = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 MODEL_NAME = "llama3.1:8b"
 
+register_travel_tools()
 
 def load_card(path: Path) -> AgentCard:
     with path.open("r", encoding="utf-8") as f:
@@ -132,7 +133,6 @@ def build_agent_factory(
         enable_metrics=False,
         debug=False,
     )
-
 
 
 async def main() -> None:

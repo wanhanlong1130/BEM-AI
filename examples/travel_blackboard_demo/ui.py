@@ -75,47 +75,59 @@ def main() -> None:
     st.caption("LangGraph chat agents via AgentFactory with shared blackboard orchestration.")
 
     session_id = get_session_id()
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = []
+    if "is_streaming" not in st.session_state:
+        st.session_state["is_streaming"] = False
     with st.sidebar:
         st.subheader("Session")
         st.text_input("Session ID", key="session_id")
-        if st.button("New Session"):
+        if st.button("New Session", disabled=st.session_state["is_streaming"]):
             st.session_state["session_id"] = str(uuid.uuid4())
             st.rerun()
         st.write(f"Orchestrator URL: `{ORCHESTRATOR_URL}`")
 
-        if st.button("Refresh Blackboard Snapshot"):
+        if st.button("Refresh Blackboard Snapshot", disabled=st.session_state["is_streaming"]):
             st.session_state["bb_snapshot"] = blackboard_read(st.session_state["session_id"])
+        if st.session_state["is_streaming"]:
+            st.info("Streaming is in progress. Snapshot refresh is temporarily disabled to avoid interrupting the stream.")
 
         with st.expander("Blackboard Snapshot", expanded=False):
             snapshot = st.session_state.get("bb_snapshot", blackboard_read(session_id))
             st.json(snapshot)
 
-    if "messages" not in st.session_state:
-        st.session_state["messages"] = []
-
     for message in st.session_state["messages"]:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    if prompt := st.chat_input("Ask the orchestrator to plan and book your trip..."):
+    if prompt := st.chat_input("Ask the orchestrator to plan and book your trip...", disabled=st.session_state["is_streaming"]):
         st.session_state["messages"].append({"role": "user", "content": prompt})
+        # Add assistant placeholder to session state immediately so reruns preserve progress.
+        st.session_state["messages"].append({"role": "assistant", "content": ""})
+        assistant_index = len(st.session_state["messages"]) - 1
+
         with st.chat_message("user"):
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
             placeholder = st.empty()
-            full_reply = ""
+            full_reply = st.session_state["messages"][assistant_index]["content"]
+            st.session_state["is_streaming"] = True
 
             async def consume_stream():
                 nonlocal full_reply
                 async for token in stream_reply(prompt, st.session_state["session_id"]):
                     full_reply += token
+                    st.session_state["messages"][assistant_index]["content"] = full_reply
                     placeholder.markdown(full_reply + "▌")
                 placeholder.markdown(full_reply)
 
-            asyncio.run(consume_stream())
+            try:
+                asyncio.run(consume_stream())
+            finally:
+                st.session_state["is_streaming"] = False
 
-        st.session_state["messages"].append({"role": "assistant", "content": full_reply})
+        st.session_state["messages"][assistant_index]["content"] = full_reply
         st.session_state["bb_snapshot"] = blackboard_read(st.session_state["session_id"])
 
 
