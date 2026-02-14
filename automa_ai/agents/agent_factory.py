@@ -20,7 +20,7 @@ from automa_ai.agents.remote_agent import SubAgentSpec
 from automa_ai.common.base_agent import BaseAgent
 from automa_ai.common.mcp_registry import MCPServerConfig
 from automa_ai.retrieval import RetrieverProviderSpec, resolve_retriever
-from automa_ai.common.utils import map_mcp_config_to_server_config
+from automa_ai.common.utils import map_mcp_config_to_server_config, load_tool_plugins
 from automa_ai.memory.manager import DefaultMemoryManager
 from automa_ai.skills import SkillManager, SkillsConfig
 from automa_ai.config.tools import ToolsConfig, ToolSpec
@@ -180,6 +180,8 @@ class AgentFactory:
         return self.__call__()
 
     def __call__(self) -> BaseAgent:
+        load_tool_plugins()
+
         chat_model = resolve_chat_model(
             self.chat_model,
             self.model_name,
