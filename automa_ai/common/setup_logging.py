@@ -1,3 +1,4 @@
+from logging.handlers import QueueListener
 import os
 import copy
 import logging
@@ -5,11 +6,10 @@ from typing import Any, Dict, Optional
 import fnmatch
 import logging.config
 
-import multiprocessing_logging
-
 
 LoggingConfigDict = Dict[str, Any]
 
+DEFAULT_LOG_FORMAT = "%(asctime)s [%(levelname)s] [%(processName)s:%(process)d] %(name)s: %(message)s"
 
 class ExcludePatternsFilter(logging.Filter):
     def __init__(self, exclude_patterns: list[str], **kwargs):
@@ -20,6 +20,12 @@ class ExcludePatternsFilter(logging.Filter):
         return not any(
             fnmatch.fnmatch(record.name, pattern) for pattern in self.exclude_patterns
         ) and super().filter(record)
+
+
+class AutoStartQueueListener(QueueListener):
+    def __init__(self, queue, *handlers, respect_handler_level=False):
+        super().__init__(queue, *handlers, respect_handler_level=respect_handler_level)
+        self.start()
 
 
 def setup_file_logger(
@@ -66,10 +72,11 @@ def setup_file_logger(
 
     return logger
 
+
 def _init_child_logging(config: dict | None):
     if config is not None:
         logging.config.dictConfig(config)
-        multiprocessing_logging.install_mp_handler(logging.getLogger()) 
+
 
 def _add_file_handler(
     logger: logging.Logger,
@@ -100,17 +107,16 @@ def _add_file_handler(
     os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
 
     for handler in logger.handlers:
-        if (
-            isinstance(handler, logging.FileHandler)
-            and getattr(handler, "baseFilename", None) == os.path.abspath(log_file_path)
-        ):
+        if isinstance(handler, logging.FileHandler) and getattr(
+            handler, "baseFilename", None
+        ) == os.path.abspath(log_file_path):
             return handler
 
     file_handler = logging.FileHandler(log_file_path, mode=mode, encoding="utf-8")
     file_handler.setLevel(level)
     if formatter is None:
         formatter = logging.Formatter(
-            "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+            DEFAULT_LOG_FORMAT
         )
     file_handler.setFormatter(formatter)
 
@@ -158,7 +164,7 @@ def _get_logging_config(log_dir: str = "logs") -> LoggingConfigDict:
             },
         },
         "formatters": {
-            "default": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"}
+            "default": {"format": DEFAULT_LOG_FORMAT}
         },
         "handlers": {
             "mcp_client_file": {
@@ -199,6 +205,21 @@ def _get_logging_config(log_dir: str = "logs") -> LoggingConfigDict:
                 "filename": f"{log_dir}/automa_ai.log",
                 "filters": ["exclude_patterns_filter"],
             },
+            "queue_listener": {
+                "class": "logging.handlers.QueueHandler",
+                "listener": "automa_ai.common.setup_logging.AutoStartQueueListener",
+                "queue": {
+                    "()": "multiprocessing.Queue"
+                },
+                "level": "INFO",
+                "handlers": [
+                    "mcp_client_file",
+                    "mcp_server_file",
+                    "orchestrator_agent_file",
+                    "adk_agent_file",
+                    "catch_all_file",
+                ],
+            },
         },
         "loggers": {
             "automa_ai.mcp_servers.client": {
@@ -234,6 +255,13 @@ def _get_logging_config(log_dir: str = "logs") -> LoggingConfigDict:
             "automa_ai": {
                 "handlers": ["catch_all_file"],
                 "level": "INFO",
+                "propagate": False,
+            },
+            # Silence multiprocessing's internal logger to avoid QueueHandler recursion
+            # from using a multiprocessing.Queue for logging.
+            "multiprocessing": {
+                "level": "WARNING",
+                "handlers": [],
                 "propagate": False,
             },
         },
@@ -326,5 +354,4 @@ def setup_logging(
     """
     config = build_logging_config(log_dir=log_dir, existing_config=existing_config)
     logging.config.dictConfig(config)
-    multiprocessing_logging.install_mp_handler(logging.getLogger()) 
     return config
