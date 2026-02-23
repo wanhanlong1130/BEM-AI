@@ -71,7 +71,3 @@ default_chroma = "automa_ai.memory.chroma_memory_store:ChromaVectorMemoryStore"
 
 [project.entry-points."automa_ai.tools"]
 web_search = "automa_ai.tools.web_search:build_web_search_tool"
-travel_flight_provider = "examples.travel_blackboard_demo.agents.common:build_travel_flight_tool"
-travel_hotel_provider = "examples.travel_blackboard_demo.agents.common:build_travel_hotel_tool"
-travel_car_provider = "examples.travel_blackboard_demo.agents.common:build_travel_car_tool"
-travel_booking_provider = "examples.travel_blackboard_demo.agents.common:build_travel_booking_tool"
